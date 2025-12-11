@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=WebKit Greeter
+Comment=webkit greeter
+Exec=webkit-greeter
+Type=Application
+X-Ubuntu-Gettext-Domain=webkit-greeter

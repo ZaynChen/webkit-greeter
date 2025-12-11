@@ -1,0 +1,3 @@
+#Type Name       ID GECOS                   Home Directory          Shell
+u webkit-greeter - "WebKit Greeter Account" /var/lib/webkit-greeter -
+m webkit-greeter video

@@ -1,0 +1,18 @@
+[package]
+name = "webkit-greeter-webext"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+description = "WebKit web extension for webkit greeter"
+repository.workspace = true
+license = "Apache-2.0"
+keywords = ["webkit", "greeter", "web-extension"]
+categories = ["GUI"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+jsc.workspace = true
+wwpe.workspace = true
+logger.workspace = true

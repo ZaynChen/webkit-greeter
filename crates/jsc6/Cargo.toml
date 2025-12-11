@@ -1,0 +1,14 @@
+[package]
+name = "jsc6"
+description = "Rust bindings for JavaScriptCore 6"
+documentation = "https://world.pages.gitlab.gnome.org/Rust/webkit6-rs/stable/latest/docs/javascriptcore6"
+version = "0.5.0"
+edition = "2021"
+authors.workspace = true
+categories = ["api-bindings", "gui"]
+repository = "https://gitlab.gnome.org/World/Rust/webkit6-rs"
+license = "MIT"
+keywords = ["webkit", "gtk-rs", "gnome", "GUI"]
+
+[dependencies]
+jsc6.workspace = true

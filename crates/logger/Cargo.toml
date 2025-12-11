@@ -1,0 +1,11 @@
+[package]
+name = "logger"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+log = "0.4.28"
+env_logger = { version = "0.11.8", features = ["humantime"] }
+chrono = "0.4.42"
