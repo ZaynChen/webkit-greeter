@@ -12,8 +12,6 @@ mod dispatcher {
     use greeters::Greeter;
     use webkit::{UserMessage, WebView, gtk::glib::VariantTy};
 
-    use std::cell::RefCell;
-
     use crate::config::Config;
 
     use super::{
@@ -22,7 +20,7 @@ mod dispatcher {
 
     pub struct Dispatcher {
         greeter: Greeter,
-        greeter_config: RefCell<GreeterConfig>,
+        greeter_config: GreeterConfig,
         greeter_comm: GreeterComm,
         theme_utils: ThemeUtils,
     }
@@ -41,7 +39,7 @@ mod dispatcher {
             Self {
                 theme_utils: ThemeUtils::new(context.clone(), &allowed_dirs, config.theme()),
                 greeter: Greeter::new(context.clone(), &primary),
-                greeter_config: RefCell::new(GreeterConfig::new(context.clone(), config)),
+                greeter_config: GreeterConfig::new(context.clone(), config),
                 greeter_comm: GreeterComm::new(context.clone(), primary, secondaries),
             }
         }
@@ -55,14 +53,14 @@ mod dispatcher {
         }
 
         pub fn themes_dir(&self) -> String {
-            self.greeter_config.borrow().themes_dir().to_string()
+            self.greeter_config.themes_dir().to_string()
         }
 
         pub fn send(&self, message: &UserMessage) {
             let reply = match parse(message) {
                 Message::GreeterConfig((method, _)) => {
                     // logger::debug!("greeter_config.{method}({json_params})");
-                    let reply = self.greeter_config.borrow().handle(&method);
+                    let reply = self.greeter_config.handle(&method);
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::GreeterComm((method, json_params)) => {
