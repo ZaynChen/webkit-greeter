@@ -4,153 +4,26 @@
 
 use gtk::{
     Application, ApplicationWindow,
-    gdk::Rectangle,
+    gdk::Monitor,
     gio::ActionEntry,
     glib::{self, clone},
     prelude::*,
 };
 use webkit::{WebView, prelude::WebViewExt};
 
-use std::{cell::Cell, rc::Rc};
-
-use crate::bridge::Dispatcher;
-
-pub struct BrowserProperties {
-    pub id: u64,
-    pub geometry: Rectangle,
-    pub is_primary: bool,
+pub fn setup_window(webview: &WebView, app: &Application, monitor: &Monitor, debug_mode: bool) {
+    let window = ApplicationWindow::new(app);
+    window.set_child(Some(webview));
+    setup_actions(&window, webview, debug_mode);
+    setup_style(&window, monitor, debug_mode);
 }
 
-pub struct Browser {
-    webview: WebView,
-    properties: Rc<BrowserProperties>,
-    loaded: Rc<Cell<bool>>,
-}
-
-impl Browser {
-    pub fn builder() -> BrowserBuilder {
-        BrowserBuilder::new()
-    }
-
-    pub fn geometry(&self) -> &Rectangle {
-        &self.properties.geometry
-    }
-
-    pub fn webview(&self) -> &WebView {
-        &self.webview
-    }
-
-    pub fn primary(&self) -> bool {
-        self.properties.is_primary
-    }
-
-    pub fn connect_user_message_received(&self, dispatcher: Rc<Dispatcher>) {
-        let win_props = &self.properties;
-        let loaded = &self.loaded;
-        self.webview.connect_user_message_received(clone!(
-            #[strong]
-            loaded,
-            #[strong]
-            dispatcher,
-            #[strong]
-            win_props,
-            move |webview, message| {
-                crate::webview::user_message_received(
-                    webview,
-                    message,
-                    &dispatcher,
-                    &loaded,
-                    &win_props,
-                )
-            }
-        ));
-    }
-}
-
-#[must_use = "The builder must be built to be used"]
-pub struct BrowserBuilder {
-    id: u64,
-    window: Option<ApplicationWindow>,
-    webview: Option<WebView>,
-    geometry: Option<Rectangle>,
-    debug_mode: bool,
-    is_primary: bool,
-}
-
-impl BrowserBuilder {
-    fn new() -> Self {
-        Self {
-            id: 0,
-            window: None,
-            webview: None,
-            geometry: None,
-            debug_mode: false,
-            is_primary: false,
-        }
-    }
-
-    pub fn id(mut self, id: u64) -> Self {
-        self.id = id;
-        self
-    }
-
-    pub fn application(mut self, app: &Application) -> Self {
-        self.window.replace(ApplicationWindow::new(app));
-        self
-    }
-
-    pub fn webview(mut self, webview: WebView) -> Self {
-        self.webview.replace(webview);
-        self
-    }
-
-    pub fn geometry(mut self, geometry: Rectangle) -> Self {
-        self.geometry.replace(geometry);
-        self
-    }
-
-    pub fn primary(mut self, is_primary: bool) -> Self {
-        self.is_primary = is_primary;
-        self
-    }
-
-    pub fn debug_mode(mut self, debug_mode: bool) -> Self {
-        self.debug_mode = debug_mode;
-        self
-    }
-
-    #[must_use = "Building the object from the builder is usually expensive and is not expected to have side effects"]
-    pub fn build(self) -> Browser {
-        if self.window.is_none() || self.webview.is_none() {
-            panic!("application and webview should both be set to build a Browser");
-        }
-        let id = self.id;
-        let webview = self.webview.unwrap();
-        let window = self.window.unwrap();
-        let geometry = self.geometry.unwrap_or_else(|| Rectangle::new(0, 0, 0, 0));
-        let debug_mode = self.debug_mode;
-        let is_primary = self.is_primary;
-
-        setup_style(&window, geometry, debug_mode);
-        setup_actions(&window, &webview, debug_mode);
-        window.set_child(Some(&webview));
-        Browser {
-            webview,
-            properties: Rc::new(BrowserProperties {
-                id,
-                geometry,
-                is_primary,
-            }),
-            loaded: Default::default(),
-        }
-    }
-}
-
-fn setup_style(window: &ApplicationWindow, geometry: Rectangle, debug: bool) {
-    window.set_cursor_from_name(Some("defualt"));
+fn setup_style(window: &ApplicationWindow, monitor: &Monitor, debug: bool) {
+    window.set_cursor_from_name(Some("default"));
+    let geometry = monitor.geometry();
     window.set_default_size(geometry.width(), geometry.height());
     window.set_show_menubar(debug);
-    window.set_fullscreened(!debug);
+    window.fullscreen_on_monitor(monitor);
 }
 
 fn setup_actions(window: &ApplicationWindow, webview: &WebView, debug: bool) {

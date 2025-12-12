@@ -4,7 +4,7 @@
 
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, absolute},
 };
 
 use crate::constants::{DEFAULT_THEME, DEFAULT_THEME_DIR};
@@ -35,8 +35,9 @@ fn list_themes(themes_dir: &str) -> Vec<String> {
     themes
 }
 
-pub fn load_theme_html(theme_dir: &Path) -> (String, String) {
-    let (primary, secondary) = load_theme_config(theme_dir);
+pub fn load_theme_html(themes_dir: &str, theme: &str) -> (String, String) {
+    let theme_dir = absolute(["/", themes_dir, theme].iter().collect::<PathBuf>()).unwrap();
+    let (primary, secondary) = load_theme_config(&theme_dir);
 
     let primary_path = theme_dir.join(&primary);
     let primary_html = if primary_path.is_file() && primary.ends_with(".html") {

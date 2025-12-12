@@ -5,7 +5,8 @@
 mod extension;
 
 use wwpe::{
-    ConsoleMessageLevel, ConsoleMessageSource, UserMessage, WebPage, WebProcessExtension,
+    ConsoleMessageLevel, ConsoleMessageSource, ScriptWorld, UserMessage, WebPage,
+    WebProcessExtension,
     ffi::WebKitWebProcessExtension,
     gio::Cancellable,
     glib::{
@@ -18,13 +19,14 @@ use wwpe::{
 
 use std::{cell::Cell, rc::Rc};
 
-fn web_page_created(page: &WebPage, secure_mode: bool, detect_theme_errors: bool) {
+fn page_created(page: &WebPage, secure_mode: bool, detect_theme_errors: bool) {
+    logger::debug!("page_created");
     let stop_prompts = Rc::new(Cell::new(false));
-
     page.connect_document_loaded(clone!(
         #[strong]
         stop_prompts,
         move |page| {
+            logger::debug!("document_loaded.send(ready-to-show)");
             stop_prompts.set(false);
             let message = wwpe::UserMessage::new("ready-to-show", None);
             page.send_message_to_view(&message, Cancellable::NONE, |_| {});
@@ -99,11 +101,22 @@ unsafe extern "C" fn webkit_web_process_extension_initialize_with_user_data(
         bool::from_variant(&user_data.child_value(1)).expect("detect_theme_errors is not a bool");
 
     let extention: WebProcessExtension = unsafe { from_glib_none(extension) };
-    extention.connect_page_created(move |_, page| {
-        web_page_created(page, secure_mode, detect_theme_errors)
-    });
+    extention
+        .connect_page_created(move |_, page| page_created(page, secure_mode, detect_theme_errors));
 
     let greeter_api_script = String::from_variant(&user_data.child_value(2))
         .expect("greeter_api_script is not a String");
-    crate::extension::web_page_initialize(greeter_api_script);
+
+    let signal_init = Cell::new(true);
+    ScriptWorld::default()
+        .expect("get default ScriptWorld failed")
+        .connect_window_object_cleared(move |world, page, frame| {
+            crate::extension::window_object_cleared(
+                world,
+                page,
+                frame,
+                &greeter_api_script,
+                &signal_init,
+            )
+        });
 }

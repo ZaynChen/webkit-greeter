@@ -6,31 +6,47 @@ use jsc::{
     JSCValueExtManual,
     glib::{MainContext, VariantTy, clone, variant::ToVariant},
 };
-use wwpe::{ScriptWorld, UserMessage, WebPage};
+use wwpe::{Frame, ScriptWorld, UserMessage, WebPage};
 
-pub fn web_page_initialize(api_script: String) {
-    ScriptWorld::default()
-        .expect("get default ScriptWorld failed")
-        .connect_window_object_cleared(move |world, page, frame| {
-            let context = frame.js_context_for_script_world(world).unwrap();
-            let global_object = context.global_object().unwrap();
+use std::cell::Cell;
 
-            global_object.object_set_property("send_request", &send_request(page, &context));
-            context.evaluate(&api_script);
+pub fn window_object_cleared(
+    world: &ScriptWorld,
+    page: &WebPage,
+    frame: &Frame,
+    api_script: &str,
+    signal_init: &Cell<bool>,
+) {
+    logger::debug!(
+        "window_object_cleared: page_id={}, frame_id={}",
+        page.id(),
+        frame.id()
+    );
+    let context = frame.js_context_for_script_world(world).unwrap();
+    let global_object = context.global_object().unwrap();
 
-            page.connect_document_loaded(move |_| {
-                global_object
-                    .object_get_property("dispatch_ready_event")
-                    .filter(|ready| ready.is_function())
-                    .map(|ready| ready.function_callv(&[]));
-            });
+    global_object.object_set_property("send_request", &send_request(page, &context));
+    context.evaluate(api_script);
 
-            page.connect_user_message_received(clone!(
-                #[strong]
-                context,
-                move |_, message| user_message_received(message, &context)
-            ));
+    // window_object_cleared signal emitted when the JavaScript window object
+    // in a WebKitScriptWorld has been cleared, thus every time the page reload,
+    // the window_object_cleared signal will be emitted.
+    // signal_init flag is used to make sure that the handlers connect to
+    // the signals only once.
+    if signal_init.get() {
+        page.connect_document_loaded(move |_| {
+            logger::debug!("document_loaded.dispatch_ready_event");
+            global_object
+                .object_get_property("dispatch_ready_event")
+                .filter(jsc::Value::is_function)
+                .map(|ready| ready.function_callv(&[]));
         });
+
+        page.connect_user_message_received(move |_, message| {
+            user_message_received(message, &context)
+        });
+        signal_init.set(false);
+    }
 }
 
 fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {

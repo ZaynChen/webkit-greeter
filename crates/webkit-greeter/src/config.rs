@@ -2,13 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::path::{PathBuf, absolute};
-
 use serde::Deserialize;
 
-use crate::{
-    constants::{CONFIG_PATH, DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR},
-    theme::load_theme_html,
+use crate::constants::{
+    CONFIG_PATH, DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR,
 };
 
 #[derive(Clone, Default, Debug, Deserialize)]
@@ -92,19 +89,6 @@ impl Config {
     // pub fn layouts(&self) -> &[String] {
     //     self.layouts.as_slice()
     // }
-
-    pub fn theme_file(&self) -> (String, String) {
-        let themes_dir = self.themes_dir();
-        let theme = self.theme();
-        let theme_dir: PathBuf = ["/", themes_dir, theme].iter().collect();
-
-        load_theme_html(&absolute(theme_dir).unwrap())
-    }
-
-    pub fn change_theme(&mut self, theme: &str) {
-        self.set_theme(theme);
-        // self.set_theme_html();
-    }
 
     fn set_debug_mode(&mut self, debug_mode: bool) {
         self.greeter.debug_mode |= debug_mode;

@@ -65,24 +65,21 @@ class User {
 }
 
 class Signal {
-  _name;
-  _callbacks = [];
-  constructor(name) {
-    this._name = name;
-  }
+  #callbacks = [];
   connect(callback) {
     if (typeof callback === "function") {
-      this._callbacks.push(callback);
+      this.#callbacks.push(callback);
     }
   }
   disconnect(callback) {
     if (typeof callback === "function") {
-      this._callbacks = this._callbacks.filter((_cb) => _cb !== callback);
+      this.#callbacks = this.#callbacks.filter((cb) => cb !== callback);
     }
   }
   _emit(...args) {
-    this._callbacks.forEach((callback) => {
-      callback(...args);
+    this.#callbacks.forEach((cb) => {
+      console.log("test");
+      cb(...args);
     });
   }
 }
@@ -92,9 +89,9 @@ class Greeter {
   show_prompt;
   show_message;
   constructor() {
-    this.authentication_complete = new Signal("authentication_complete");
-    this.show_prompt = new Signal("show_prompt");
-    this.show_message = new Signal("show_message");
+    this.authentication_complete = new Signal();
+    this.show_prompt = new Signal();
+    this.show_message = new Signal();
   }
   #send_request(method, args) {
     return send_request("greeter", method, args);
@@ -121,10 +118,9 @@ class Greeter {
   // get has_guest_account() {
   //   return this.#send_request("has_guest_account");
   // }
-  // get in_authentication() {
-  //   // return this.#send_request("in_authentication");
-  //   return false;
-  // }
+  get in_authentication() {
+    return this.#send_request("in_authentication");
+  }
   get is_authenticated() {
     return this.#send_request("is_authenticated");
   }
@@ -135,13 +131,29 @@ class Greeter {
     return this.#send_request("languages").map((l) => new Language(l));
   }
   get layout() {
-    return new Layout(this.#send_request("layout"));
+    // TODO:  current layout
+    //
+    // return new Layout(this.#send_request("layout"));
+    return new Layout({
+      description: "英语（美国）",
+      name: "us",
+      short_description: "en",
+    });
   }
   set layout(value) {
     this.#send_request("layout", [value]);
   }
   get layouts() {
-    return this.#send_request("layouts").map((l) => new Layout(l));
+    // TODO:  current layout
+    //
+    // return this.#send_request("layouts").map((l) => new Layout(l));
+    return [
+      new Layout({
+        description: "英语（美国）",
+        name: "us",
+        short_description: "en",
+      }),
+    ];
   }
   // get lock_hint() {
   //   // return this.#send_request("lock_hint");
@@ -153,20 +165,8 @@ class Greeter {
   get users() {
     return this.#send_request("users").map((u) => new User(u));
   }
-  authenticate(username = null) {
-    return this.#send_request("authenticate", [username]);
-  }
-  // authenticate_as_guest() {
-  //   return this.#send_request("authenticate_as_guest");
-  // }
-  cancel_authentication() {
-    return this.#send_request("cancel_authentication");
-  }
   hibernate() {
     return this.#send_request("hibernate");
-  }
-  respond(password) {
-    return this.#send_request("respond", [password]);
   }
   restart() {
     return this.#send_request("restart");
@@ -174,11 +174,23 @@ class Greeter {
   shutdown() {
     return this.#send_request("shutdown");
   }
-  start_session(session) {
-    return this.#send_request("start_session", [session]);
-  }
   suspend() {
     return this.#send_request("suspend");
+  }
+  // authenticate_as_guest() {
+  //   return this.#send_request("authenticate_as_guest");
+  // }
+  authenticate(username = null) {
+    return this.#send_request("authenticate", [username]);
+  }
+  respond(password) {
+    return this.#send_request("respond", [password]);
+  }
+  cancel_authentication() {
+    return this.#send_request("cancel_authentication");
+  }
+  start_session(session) {
+    return this.#send_request("start_session", [session]);
   }
 }
 
@@ -210,19 +222,20 @@ class GreeterConfig {
   get greeter() {
     return this.#send_request("greeter");
   }
+  get layouts() {
+    return [];
+  }
 }
 
 class ThemeUtils {
   #time_language;
-  constructor() {
-    this.#time_language = send_request(
-      "greeter_config",
-      "greeter",
-    ).time_language;
+  constructor(time_language = "") {
+    this.#time_language = time_language;
   }
   #send_request(method, args) {
     return send_request("theme_utils", method, args);
   }
+
   /**
    * Returns the contents of directory found at `path` provided that the (normalized) `path`
    * meets at least one of the following conditions:
@@ -262,8 +275,9 @@ class ThemeUtils {
   }
   get_current_localized_date() {
     const locales = [];
-    if (this.#time_language !== "") {
-      locales.push(this.#time_language);
+    const time_language = this.#time_language;
+    if ("" !== time_language) {
+      locales.push(time_language);
     }
     return new Intl.DateTimeFormat(locales, {
       day: "2-digit",
@@ -284,8 +298,9 @@ class ThemeUtils {
    */
   get_current_localized_time() {
     const locales = [];
-    if (this.#time_language !== "") {
-      locales.push(this.#time_language);
+    const time_language = this.#time_language;
+    if ("" !== time_language) {
+      locales.push(time_language);
     }
     return new Intl.DateTimeFormat(locales, {
       hour: "2-digit",
@@ -297,7 +312,9 @@ class ThemeUtils {
 window.greeter_comm = new GreeterComm();
 window.greeter_config = new GreeterConfig();
 window.greeter = new Greeter();
-window.theme_utils = new ThemeUtils();
+window.theme_utils = new ThemeUtils(window.greeter.time_language);
 window.lightdm = window.greeter;
 window._ready_event = new Event("GreeterReady");
-window.dispatch_ready_event = () => dispatchEvent(window._ready_event);
+window.dispatch_ready_event = () => {
+  dispatchEvent(window._ready_event);
+};

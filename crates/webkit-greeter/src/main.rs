@@ -4,11 +4,11 @@
 
 mod application;
 mod bridge;
-mod browser;
 mod config;
 mod constants;
 mod theme;
 mod webview;
+mod window;
 
 use gtk::{gio, glib, prelude::*};
 

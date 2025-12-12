@@ -2,12 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use gtk::{AlertDialog, ApplicationWindow, gdk, gio::Cancellable, glib::clone};
+use gtk::{AlertDialog, ApplicationWindow, gdk, gio::Cancellable};
 use webkit::{HardwareAccelerationPolicy, Settings, UserMessage, WebView, prelude::*};
 
-use std::{cell::Cell, rc::Rc};
-
-use crate::{bridge::Dispatcher, browser::BrowserProperties, constants::DEFAULT_THEME};
+use crate::{bridge::Dispatcher, constants::DEFAULT_THEME, theme::load_theme_html};
 
 pub fn webview_new(debug: bool, theme_file: &str) -> WebView {
     let settings = Settings::builder()
@@ -32,47 +30,48 @@ pub fn webview_new(debug: bool, theme_file: &str) -> WebView {
     webview
 }
 
-pub fn user_message_received(
+pub fn primary_user_message_received(
     webview: &WebView,
     message: &UserMessage,
-    dispatcher: &Rc<Dispatcher>,
-    loaded: &Rc<Cell<bool>>,
-    win_props: &Rc<BrowserProperties>,
+    dispatcher: &Dispatcher,
 ) -> bool {
     match message.name().as_deref() {
         Some("ready-to-show") => {
-            if loaded.get() {
-                return true;
-            }
-
+            logger::debug!("primary ready-to-show");
             let root = webview.root().expect("webview.root is None");
             let window = root
                 .downcast_ref::<ApplicationWindow>()
                 .expect("webview.root is not a ApplicationWindow");
-            webview.grab_focus();
             window.present();
-
-            loaded.set(true);
             logger::debug!("WebKit Greeter started win: {}", window.id());
             true
         }
         Some("console") => {
-            show_console_error_prompt(webview, message, dispatcher);
+            show_console_error_prompt(message.clone(), dispatcher);
             true
         }
         Some(_) => {
-            dispatcher.send(message, win_props);
+            dispatcher.send(message);
             true
         }
         None => false,
     }
 }
 
-pub fn show_console_error_prompt(
-    webview: &WebView,
-    message: &UserMessage,
-    dispatcher: &Rc<Dispatcher>,
-) {
+pub fn secondary_user_message_received(webview: &WebView, message: &UserMessage) -> bool {
+    if !matches!(message.name().as_deref(), Some("ready-to-show")) {
+        return false;
+    }
+    logger::debug!("seconary ready-to-show");
+    let root = webview.root().expect("webview.root is None");
+    let window = root
+        .downcast_ref::<ApplicationWindow>()
+        .expect("webview.root is not a ApplicationWindow");
+    window.present();
+    true
+}
+
+pub fn show_console_error_prompt(message: UserMessage, dispatcher: &Dispatcher) {
     let params = message.parameters().unwrap();
 
     let msg_var = params.child_value(1);
@@ -81,46 +80,39 @@ pub fn show_console_error_prompt(
     let source_id = source_id_var.str().unwrap();
     let line = u32::from_variant(&params.child_value(3)).unwrap();
 
-    let dialog = AlertDialog::builder()
-        .message("An error ocurred. Do you want to change to default theme? (litarvan)")
-        .detail(format!(r##"{source_id} {line}: {msg}"##))
-        .buttons(["_Cancel", "_Use default theme", "_Reload theme"])
-        .build();
-
-    let root = webview.root().expect("webview.root is None");
+    let primary = dispatcher.primary().clone();
+    let secondaries = dispatcher.secondaries().to_vec();
+    let root = primary.root().expect("webview.root is None");
     let window = root
         .downcast_ref::<ApplicationWindow>()
         .expect("webview.root is not a ApplicationWindow");
-
-    dialog.choose(
-        Some(window),
-        Some(&Cancellable::new()),
-        clone!(
-            #[strong]
-            message,
-            #[strong]
-            dispatcher,
-            move |res| {
-                let response = res.unwrap();
-
-                let stop_prompts = match response {
-                    0 => false,
-                    1 => {
-                        dispatcher.change_theme(Some(DEFAULT_THEME));
-                        true
-                    }
-                    2 => {
-                        dispatcher.change_theme(None);
-                        true
-                    }
-                    _ => false,
-                };
-
+    let themes_dir = dispatcher.themes_dir();
+    AlertDialog::builder()
+        .message("An error ocurred. Change to default theme? (litarvan)")
+        .detail(format!("{source_id} {line}: {msg}"))
+        .buttons(["Cancel", "Use default theme", "Reload theme"])
+        .build()
+        .choose(Some(window), Some(&Cancellable::new()), move |res| {
+            if let Ok(stop_prompts) = res.map(|response| match response {
+                1 => {
+                    let (phtml, shtml) = load_theme_html(&themes_dir, DEFAULT_THEME);
+                    primary.load_uri(&phtml);
+                    secondaries
+                        .iter()
+                        .for_each(|webview| webview.load_uri(&shtml));
+                    true
+                }
+                2 => {
+                    primary.reload();
+                    secondaries.iter().for_each(|webview| webview.reload());
+                    true
+                }
+                _ => false,
+            }) {
                 message.send_reply(&UserMessage::new(
                     "console-done",
                     Some(&stop_prompts.to_variant()),
-                ));
+                ))
             }
-        ),
-    );
+        });
 }

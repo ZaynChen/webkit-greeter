@@ -10,14 +10,11 @@ pub use dispatcher::Dispatcher;
 
 mod dispatcher {
     use greeters::Greeter;
-    use webkit::{UserMessage, gtk::glib::VariantTy};
+    use webkit::{UserMessage, WebView, gtk::glib::VariantTy};
 
-    use std::{cell::RefCell, rc::Rc};
+    use std::cell::RefCell;
 
-    use crate::{
-        browser::{Browser, BrowserProperties},
-        config::Config,
-    };
+    use crate::config::Config;
 
     use super::{
         greeter_comm::GreeterComm, greeter_config::GreeterConfig, theme_utils::ThemeUtils,
@@ -31,35 +28,37 @@ mod dispatcher {
     }
 
     impl Dispatcher {
-        pub fn new(config: Config, context: jsc::Context, browsers: Rc<Vec<Browser>>) -> Self {
-            let theme = config.theme().to_string();
-            let webviews: Vec<_> = browsers.iter().map(|b| b.webview().clone()).collect();
-            let greeter = Greeter::new(context.clone(), webviews);
+        pub fn new(
+            config: Config,
+            context: jsc::Context,
+            primary: WebView,
+            secondaries: Vec<WebView>,
+        ) -> Self {
             let allowed_dirs = [
                 config.themes_dir().to_string(),
                 config.background_images_dir().to_string(),
             ];
-            let theme_utils = ThemeUtils::new(context.clone(), &allowed_dirs, &theme);
-            let greeter_config = RefCell::new(GreeterConfig::new(context.clone(), config));
-            let greeter_comm = GreeterComm::new(context, browsers);
             Self {
-                greeter,
-                greeter_config,
-                greeter_comm,
-                theme_utils,
+                theme_utils: ThemeUtils::new(context.clone(), &allowed_dirs, config.theme()),
+                greeter: Greeter::new(context.clone(), &primary),
+                greeter_config: RefCell::new(GreeterConfig::new(context.clone(), config)),
+                greeter_comm: GreeterComm::new(context.clone(), primary, secondaries),
             }
         }
 
-        pub fn change_theme(&self, theme: Option<&str>) {
-            if let Some(theme) = theme {
-                self.greeter_config.borrow_mut().change_theme(theme);
-            }
-
-            let (primary, secondary) = self.greeter_config.borrow().theme_file();
-            self.greeter_comm.load_theme(primary, secondary);
+        pub fn primary(&self) -> &WebView {
+            self.greeter_comm.primary()
         }
 
-        pub fn send(&self, message: &UserMessage, win_props: &BrowserProperties) {
+        pub fn secondaries(&self) -> &[WebView] {
+            self.greeter_comm.secondaries()
+        }
+
+        pub fn themes_dir(&self) -> String {
+            self.greeter_config.borrow().themes_dir().to_string()
+        }
+
+        pub fn send(&self, message: &UserMessage) {
             let reply = match parse(message) {
                 Message::GreeterConfig((method, _)) => {
                     // logger::debug!("greeter_config.{method}({json_params})");
@@ -68,7 +67,7 @@ mod dispatcher {
                 }
                 Message::GreeterComm((method, json_params)) => {
                     // logger::debug!("greeter_comm.{method}({json_params})");
-                    let reply = self.greeter_comm.handle(&method, &json_params, win_props);
+                    let reply = self.greeter_comm.handle(&method, &json_params);
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::Greeter((method, json_params)) => {

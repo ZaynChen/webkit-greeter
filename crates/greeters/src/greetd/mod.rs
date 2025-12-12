@@ -16,7 +16,7 @@ use webkit::{
     glib::{Variant, clone, variant::ToVariant},
 };
 
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
 
 use accounts::{User, UserManager};
 use client::GreetdClient;
@@ -30,14 +30,13 @@ pub struct Greeter {
 }
 
 impl Greeter {
-    pub fn new(context: jsc::Context, webviews: Vec<WebView>) -> Self {
+    pub fn new(context: jsc::Context, webview: &WebView) -> Self {
         let mut greeter = GreetdClient::new();
 
-        let webviews = Rc::new(webviews);
         greeter.connect_authentication_complete(clone!(
             #[strong]
-            webviews,
-            move |_| signals::authentication_complete(&webviews)
+            webview,
+            move |_| signals::authentication_complete(&webview)
         ));
 
         Self {
@@ -345,11 +344,9 @@ mod signals {
         UserMessage, WebView, gio::Cancellable, glib::variant::ToVariant, prelude::WebViewExt,
     };
 
-    pub(super) fn authentication_complete(webviews: &[WebView]) {
-        webviews.iter().for_each(|webview| {
-            let parameters = ["authentication_complete", "[]"].to_variant();
-            let message = UserMessage::new("greeter", Some(&parameters));
-            webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
-        });
+    pub(super) fn authentication_complete(webview: &WebView) {
+        let parameters = ["authentication_complete", "[]"].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 }

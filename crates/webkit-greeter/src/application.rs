@@ -2,31 +2,32 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use webkit::gtk::{
-    self, Application, CssProvider,
-    gdk::{Display, Monitor},
-    gio::{ActionEntry, MenuModel},
-    glib::{self, translate::*},
-    prelude::*,
+use webkit::{
+    gtk::{
+        self, Application, CssProvider,
+        gdk::{Display, Monitor},
+        gio::{ActionEntry, MenuModel},
+        prelude::*,
+    },
+    prelude::WebViewExt,
 };
-
-use std::rc::Rc;
 
 use crate::{
     bridge::Dispatcher,
-    browser::Browser,
     config::Config,
     constants::{GREETER_RESOURCE_PREFIX, WEB_EXTENSIONS_DIR},
-    webview::webview_new,
+    theme::load_theme_html,
+    webview::{primary_user_message_received, secondary_user_message_received, webview_new},
+    window::setup_window,
 };
 
 pub fn on_activate(app: &Application, config: &Config) {
     {
+        let api = greeters::greeter_api();
         let webcontext = webkit::WebContext::default().expect("default web context does not exist");
         webcontext.set_cache_model(webkit::CacheModel::DocumentViewer);
         let secure_mode = config.secure_mode();
         let detect_theme_error = config.detect_theme_errors();
-        let api = greeters::greeter_api();
         webcontext.connect_initialize_web_process_extensions(
             move |context: &webkit::WebContext| {
                 let data = (secure_mode, detect_theme_error, &api).to_variant();
@@ -59,43 +60,48 @@ pub fn on_activate(app: &Application, config: &Config) {
     // Therefore, in wayland, is_primary seems only used
     // for contrainting the applicatin to construct only one primary window,
     // and does not determine which monitor it should present on,
-    let browsers: Vec<Browser> = {
-        let monitors = display.monitors();
-        let only_one_monitor = monitors.n_items() == 1u32;
-        let primary_monitor = config.primary_monitor();
-        let debug = config.debug_mode();
-        let (primary, secondary) = config.theme_file();
-        monitors
+    let (primary, secondaries) = {
+        let primary_monitor = config.primary_monitor().unwrap_or("0");
+        let (primary_monitors, secondary_monitors): (Vec<_>, Vec<_>) = display
+            .monitors()
             .iter::<Monitor>()
             .filter_map(|m| m.ok())
             .enumerate()
-            .map(|(idx, m)| {
-                let id = gen_id(&m);
-                let geometry = m.geometry();
-                let is_primary = only_one_monitor
-                    || Some(idx.to_string().as_ref()) == primary_monitor
-                    || m.connector().as_deref() == primary_monitor;
-                let theme_file = if is_primary { &primary } else { &secondary };
-                Browser::builder()
-                    .debug_mode(debug)
-                    .id(id)
-                    .geometry(geometry)
-                    .primary(is_primary)
-                    .application(app)
-                    .webview(webview_new(debug, theme_file))
-                    .build()
+            .partition(|(idx, m)| {
+                idx.to_string() == primary_monitor
+                    || m.connector().as_deref() == Some(primary_monitor)
+            });
+
+        let debug = config.debug_mode();
+        let (primary_html, secondary_html) = load_theme_html(config.themes_dir(), config.theme());
+
+        let primary = webview_new(debug, &primary_html);
+        let (_, primary_monitor) = primary_monitors.first().expect("no primary monitor exist");
+        setup_window(&primary, app, primary_monitor, debug);
+        primary.grab_focus();
+
+        let secondaries = secondary_monitors
+            .iter()
+            .map(|(_, monitor)| {
+                let secondary = webview_new(debug, &secondary_html);
+                setup_window(&secondary, app, monitor, debug);
+                secondary.connect_user_message_received(secondary_user_message_received);
+                secondary
             })
-            .collect()
+            .collect();
+
+        (primary, secondaries)
     };
-    let browsers = Rc::new(browsers);
-    let dispatcher = Rc::new(Dispatcher::new(
+
+    let dispatcher = Dispatcher::new(
         config.clone(),
         jsc::Context::default(),
-        browsers.clone(),
-    ));
-    browsers.iter().for_each(|browser| {
-        browser.connect_user_message_received(dispatcher.clone());
-    })
+        primary.clone(),
+        secondaries,
+    );
+    primary.connect_user_message_received(move |webview, message| {
+        primary_user_message_received(webview, message, &dispatcher)
+    });
 }
 
 pub fn on_startup(app: &Application) {
@@ -150,17 +156,4 @@ fn set_cursor(display: &gtk::gdk::Display) {
             gdkx::x11::xlib::XDefineCursor(display.xdisplay(), root_window, cursor);
         }
     }
-}
-
-fn gen_id(monitor: &Monitor) -> u64 {
-    let manufacture = monitor.manufacturer();
-    let model = monitor.model();
-    let manufacture_hash = manufacture.map_or(0, |m| unsafe {
-        glib::ffi::g_str_hash(m.into_glib_ptr() as glib::ffi::gconstpointer)
-    }) as u64;
-    let model_hash = model.map_or(0, |m| unsafe {
-        glib::ffi::g_str_hash(m.into_glib_ptr() as glib::ffi::gconstpointer)
-    }) as u64;
-
-    (manufacture_hash << 24) | (model_hash << 8)
 }
