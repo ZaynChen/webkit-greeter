@@ -2,15 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use webkit::{
-    gtk::{
-        self, Application, CssProvider,
-        gdk::{Display, Monitor},
-        gio::{ActionEntry, MenuModel},
-        prelude::*,
-    },
-    prelude::WebViewExt,
+use gtk::{
+    Application, CssProvider,
+    gdk::{Display, Monitor},
+    gio::{ActionEntry, MenuModel},
+    prelude::*,
 };
+use webkit::{CacheModel, WebContext, prelude::WebViewExt};
 
 use crate::{
     bridge::Dispatcher,
@@ -24,19 +22,17 @@ use crate::{
 pub fn on_activate(app: &Application, config: &Config) {
     {
         let api = greeters::greeter_api();
-        let webcontext = webkit::WebContext::default().expect("default web context does not exist");
-        webcontext.set_cache_model(webkit::CacheModel::DocumentViewer);
+        let webcontext = WebContext::default().expect("default web context does not exist");
+        webcontext.set_cache_model(CacheModel::DocumentViewer);
         let secure_mode = config.secure_mode();
         let detect_theme_error = config.detect_theme_errors();
-        webcontext.connect_initialize_web_process_extensions(
-            move |context: &webkit::WebContext| {
-                let data = (secure_mode, detect_theme_error, &api).to_variant();
-                logger::debug!("Extension initialized");
+        webcontext.connect_initialize_web_process_extensions(move |context: &WebContext| {
+            let data = (secure_mode, detect_theme_error, &api).to_variant();
+            logger::debug!("Extension initialized");
 
-                context.set_web_process_extensions_directory(*WEB_EXTENSIONS_DIR);
-                context.set_web_process_extensions_initialization_user_data(&data);
-            },
-        );
+            context.set_web_process_extensions_directory(*WEB_EXTENSIONS_DIR);
+            context.set_web_process_extensions_initialization_user_data(&data);
+        });
     }
 
     let display = Display::default().expect("Default display does not exist");
@@ -106,7 +102,9 @@ pub fn on_activate(app: &Application, config: &Config) {
 
 pub fn on_startup(app: &Application) {
     app.set_accels_for_action("app.quit", &["<Ctl>Q"]);
-    app.set_accels_for_action("win.toggle-inspector", &["<Ctl><Shift>I", "F12"]);
+    app.add_action_entries([ActionEntry::builder("quit")
+        .activate(|app: &Application, _, _| app.quit())
+        .build()]);
 
     app.set_accels_for_action("win.undo", &["<Ctl>Z"]);
     app.set_accels_for_action("win.redo", &["<Ctl><Shift>Z"]);
@@ -116,6 +114,8 @@ pub fn on_startup(app: &Application) {
     app.set_accels_for_action("win.paste-plain", &["<Ctl><Shift>V"]);
     app.set_accels_for_action("win.select-all", &["<Ctl>A"]);
 
+    app.set_accels_for_action("win.reload", &["<Ctl>R", "F5", "Refresh", "Reload"]);
+    app.set_accels_for_action("win.force-reload", &["<Ctl><Shift>R", "<Shift>F5"]);
     app.set_accels_for_action("win.zoom-normal", &["<Ctl>0", "<Ctl>KP_0"]);
     app.set_accels_for_action(
         "win.zoom-in",
@@ -126,15 +126,10 @@ pub fn on_startup(app: &Application) {
         &["<Ctl>minus", "<Ctl>KP_Subtract", "ZoomOut"],
     );
     app.set_accels_for_action("win.fullscreen", &["F11"]);
-    app.set_accels_for_action("win.reload", &["<Ctl>R", "F5", "Refresh", "Reload"]);
-    app.set_accels_for_action("win.force-reload", &["<Ctl><Shift>R", "<Shift>F5"]);
 
-    app.set_accels_for_action("win.close", &["<Ctl>W"]);
+    app.set_accels_for_action("win.toggle-inspector", &["<Ctl><Shift>I", "F12"]);
     app.set_accels_for_action("win.minimize", &["<Ctl>M"]);
-
-    app.add_action_entries([ActionEntry::builder("quit")
-        .activate(|app: &Application, _, _| app.quit())
-        .build()]);
+    app.set_accels_for_action("win.close", &["<Ctl>W"]);
 
     app.set_menubar(
         gtk::Builder::from_resource(&format!("{GREETER_RESOURCE_PREFIX}/menubar.ui"))
