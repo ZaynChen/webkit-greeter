@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use zbus::blocking::Connection;
+
 use std::sync::OnceLock;
 
-use zbus::{blocking::Connection, proxy};
-
-use super::constants::LOGIN_UID_MINMAX;
+use super::{constants::LOGIN_UID_MINMAX, dbus::AccountsService};
 
 pub struct User {
     home_directory: Option<String>,
@@ -19,6 +19,25 @@ pub struct User {
 }
 
 impl User {
+    fn new(
+        home_directory: Option<String>,
+        icon_file: Option<String>,
+        language: Option<String>,
+        real_name: Option<String>,
+        session: Option<String>,
+        uid: Option<u64>,
+        user_name: Option<String>,
+    ) -> Self {
+        Self {
+            home_directory,
+            icon_file,
+            language,
+            real_name,
+            session,
+            uid,
+            user_name,
+        }
+    }
     /// HomeDirectory property
     pub fn home_directory(&self) -> Option<&str> {
         self.home_directory.as_deref()
@@ -55,27 +74,6 @@ impl User {
     }
 }
 
-impl<'p> From<UserProxyBlocking<'p>> for User {
-    fn from(user: UserProxyBlocking) -> Self {
-        let home_directory = user.home_directory().ok();
-        let icon_file = user.icon_file().ok();
-        let language = user.language().ok();
-        let real_name = user.real_name().ok();
-        let session = user.session().ok();
-        let uid = user.uid().ok();
-        let user_name = user.user_name().ok();
-        Self {
-            home_directory,
-            icon_file,
-            language,
-            real_name,
-            session,
-            uid,
-            user_name,
-        }
-    }
-}
-
 pub struct UserManager {
     users: Vec<User>,
 }
@@ -88,18 +86,28 @@ impl UserManager {
             logger::warn!("UID_MIN={uid_min}, UID_MAX={uid_max}");
             // TODO: passwd
             let conn = Connection::system().unwrap();
-            let accounts = AccountsProxyBlocking::new(&conn).unwrap();
-            let users: Vec<_> = accounts
+            let users: Vec<_> = AccountsService::accounts_proxy(&conn)
                 .list_cached_users()
                 .unwrap()
                 .into_iter()
                 .map(|o| {
-                    UserProxyBlocking::builder(&conn)
-                        .path(o.clone())
-                        .unwrap()
-                        .build()
-                        .unwrap()
-                        .into()
+                    let user = AccountsService::user_proxy(&conn, o);
+                    let home_directory = user.home_directory().ok();
+                    let icon_file = user.icon_file().ok();
+                    let language = user.language().ok();
+                    let real_name = user.real_name().ok();
+                    let session = user.session().ok();
+                    let uid = user.uid().ok();
+                    let user_name = user.user_name().ok();
+                    User::new(
+                        home_directory,
+                        icon_file,
+                        language,
+                        real_name,
+                        session,
+                        uid,
+                        user_name,
+                    )
                 })
                 .collect();
             Self { users }
@@ -109,48 +117,4 @@ impl UserManager {
     pub fn list_users(&self) -> &[User] {
         &self.users
     }
-}
-
-#[proxy(
-    interface = "org.freedesktop.Accounts",
-    default_service = "org.freedesktop.Accounts",
-    default_path = "/org/freedesktop/Accounts"
-)]
-pub trait Accounts {
-    /// ListCachedUsers method
-    fn list_cached_users(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
-}
-
-#[proxy(
-    interface = "org.freedesktop.Accounts.User",
-    default_service = "org.freedesktop.Accounts"
-)]
-pub trait User {
-    /// HomeDirectory property
-    #[zbus(property)]
-    fn home_directory(&self) -> zbus::Result<String>;
-
-    /// IconFile property
-    #[zbus(property)]
-    fn icon_file(&self) -> zbus::Result<String>;
-
-    /// Language property
-    #[zbus(property)]
-    fn language(&self) -> zbus::Result<String>;
-
-    /// RealName property
-    #[zbus(property)]
-    fn real_name(&self) -> zbus::Result<String>;
-
-    /// Session property
-    #[zbus(property)]
-    fn session(&self) -> zbus::Result<String>;
-
-    /// Uid property
-    #[zbus(property)]
-    fn uid(&self) -> zbus::Result<u64>;
-
-    /// UserName property
-    #[zbus(property)]
-    fn user_name(&self) -> zbus::Result<String>;
 }

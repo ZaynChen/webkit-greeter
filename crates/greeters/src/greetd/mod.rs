@@ -5,6 +5,7 @@
 mod accounts;
 mod client;
 mod constants;
+mod dbus;
 mod language;
 mod power;
 mod session;
