@@ -57,9 +57,13 @@ pub fn on_activate(app: &Application, config: &Config) {
     // for contrainting the applicatin to construct only one primary window,
     // and does not determine which monitor it should present on,
     let (primary, secondaries) = {
-        let primary_monitor = config.primary_monitor().unwrap_or("0");
-        let (primary_monitors, secondary_monitors): (Vec<_>, Vec<_>) = display
-            .monitors()
+        let monitors = display.monitors();
+        let primary_monitor = if monitors.n_items() > 1 {
+            config.primary_monitor().unwrap_or("0")
+        } else {
+            "0"
+        };
+        let (primary_monitors, secondary_monitors): (Vec<_>, Vec<_>) = monitors
             .iter::<Monitor>()
             .filter_map(|m| m.ok())
             .enumerate()
@@ -72,7 +76,9 @@ pub fn on_activate(app: &Application, config: &Config) {
         let (primary_html, secondary_html) = load_theme_html(config.themes_dir(), config.theme());
 
         let primary = webview_new(debug, &primary_html);
-        let (_, primary_monitor) = primary_monitors.first().expect("no primary monitor exist");
+        let (_, primary_monitor) = primary_monitors
+            .first()
+            .unwrap_or_else(|| panic!("primary monitor \"{primary_monitor}\" does not exist"));
         setup_window(&primary, app, primary_monitor, debug);
         primary.grab_focus();
 
