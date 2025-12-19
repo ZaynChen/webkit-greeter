@@ -51,7 +51,6 @@ impl Greeter {
         let params = jsc::Value::from_json(context, json_params).to_vec();
         let ret = if params.is_empty() {
             match name {
-                // "authentication_user" => self.authentication_user(),
                 // "autologin_guest" => self.autologin_guest(),
                 // "autologin_timeout" => self.autologin_timeout(),
                 // "autologin_user" => self.autologin_user(),
@@ -63,6 +62,7 @@ impl Greeter {
                 // "has_guest_account" => self.has_guest_account(),
                 // "hide_users_hint" => self.hide_users_hint(),
                 // "hostname" => self.hostname(),
+                "authentication_user" => self.authentication_user(),
                 "in_authentication" => self.in_authentication(),
                 "is_authenticated" => self.is_authenticated(),
                 "language" => self.language(),
@@ -92,7 +92,7 @@ impl Greeter {
         } else {
             match name {
                 // "layout" => self.set_layout(params[0].clone()),
-                // "set_language" => self.set_language(&params[0].to_string()),
+                "set_language" => self.set_language(&params[0].to_string()),
                 "authenticate" => self.authenticate(params[0].to_string()),
                 "respond" => self.respond(params[0].to_string()),
                 "start_session" => self.start_session(params[0].to_string()),
@@ -126,6 +126,10 @@ impl Greeter {
         jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
     }
 
+    fn authentication_user(&self) -> jsc::Value {
+        jsc::Value::new_string(&self.context, self.greeter.borrow().authentication_user())
+    }
+
     fn in_authentication(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, self.greeter.borrow().in_authentication())
     }
@@ -142,6 +146,21 @@ impl Greeter {
                 Some(language) => language_to_jsc_value(context, language),
                 None => jsc::Value::new_undefined(context),
             },
+        }
+    }
+
+    fn set_language(&self, language: &str) -> jsc::Value {
+        let context = &self.context;
+        if let Some(user) = self.greeter.borrow().authentication_user() {
+            if let Err(e) = UserManager::set_language(user, language) {
+                logger::error!("{e}");
+                jsc::Value::new_boolean(context, false)
+            } else {
+                jsc::Value::new_boolean(context, true)
+            }
+        } else {
+            logger::error!("No user is in authentication");
+            jsc::Value::new_boolean(context, false)
         }
     }
 

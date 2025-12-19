@@ -114,4 +114,11 @@ impl UserManager {
     pub fn list_users(&self) -> &[User] {
         &self.users
     }
+
+    pub fn set_language(username: &str, language: &str) -> Result<(), String> {
+        AccountsService::accounts_proxy()
+            .find_user_by_name(username)
+            .and_then(|o| AccountsService::user_proxy(o).set_language(language))
+            .map_err(|e| e.to_string())
+    }
 }

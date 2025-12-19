@@ -17,6 +17,8 @@ pub type GreetdResult = Result<Response, greetd_ipc::codec::Error>;
 pub struct GreetdClient {
     /// Greetd socket for communicating with greetd service
     socket: Option<UnixStream>,
+    /// Current user in authentication
+    auth_user: Option<String>,
     /// Authentication status for login flow
     ///
     /// NotStarted -> CreateSession -> InAuthentication
@@ -52,6 +54,7 @@ impl GreetdClient {
 
         Self {
             socket,
+            auth_user: None,
             auth_status: AuthStatus::NotStarted,
             authentication_complete: None,
         }
@@ -71,6 +74,10 @@ impl GreetdClient {
         {
             callback(self);
         }
+    }
+
+    pub fn authentication_user(&self) -> Option<&str> {
+        self.auth_user.as_deref()
     }
 
     pub fn in_authentication(&self) -> bool {
@@ -104,13 +111,14 @@ impl GreetdClient {
             });
         }
 
+        self.auth_user = Some(username.clone());
         let socket = self.socket()?;
         let request = Request::CreateSession { username };
         request.write_to(socket)?;
         Response::read_from(socket).inspect(|resp| match resp {
             Response::Success => self.set_auth_status(AuthStatus::Authenticated),
             Response::AuthMessage { .. } => self.set_auth_status(AuthStatus::InAuthentication),
-            _ => {}
+            _ => self.auth_user = None,
         })
     }
 
@@ -179,7 +187,10 @@ impl GreetdClient {
         Request::CancelSession.write_to(socket)?;
         Response::read_from(socket).inspect(|resp| {
             match resp {
-                Response::Success => self.set_auth_status(AuthStatus::NotStarted),
+                Response::Success => {
+                    self.set_auth_status(AuthStatus::NotStarted);
+                    self.auth_user = None;
+                }
                 Response::AuthMessage { .. } => {
                     unimplemented!(
                         "greetd resonded with auth request after requesting session cancellation."
