@@ -1,20 +1,22 @@
 use serde::{Deserialize, Serialize};
 use zbus::{
-    blocking::Connection,
     proxy,
     zvariant::{OwnedObjectPath, OwnedValue, Type, Value, as_value},
 };
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::OnceLock};
+
+use super::system_conn;
 
 pub struct AccountsService;
 impl AccountsService {
-    pub fn accounts_proxy(conn: &Connection) -> AccountsProxyBlocking<'_> {
-        AccountsProxyBlocking::new(conn).unwrap()
+    pub fn accounts_proxy() -> &'static AccountsProxyBlocking<'static> {
+        static ACCOUNTS_PROXY: OnceLock<AccountsProxyBlocking> = OnceLock::new();
+        ACCOUNTS_PROXY.get_or_init(|| AccountsProxyBlocking::new(system_conn()).unwrap())
     }
 
-    pub fn user_proxy(conn: &Connection, o: OwnedObjectPath) -> UserProxyBlocking<'_> {
-        UserProxyBlocking::builder(conn)
+    pub fn user_proxy(o: OwnedObjectPath) -> UserProxyBlocking<'static> {
+        UserProxyBlocking::builder(system_conn())
             .path(o)
             .unwrap()
             .build()

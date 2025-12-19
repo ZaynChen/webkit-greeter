@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-use zbus::blocking::Connection;
-
 use std::sync::OnceLock;
 
 use super::{constants::LOGIN_UID_MINMAX, dbus::AccountsService};
@@ -84,14 +82,12 @@ impl UserManager {
         USER_MANAGER.get_or_init(|| {
             let (uid_min, uid_max) = *LOGIN_UID_MINMAX;
             logger::warn!("UID_MIN={uid_min}, UID_MAX={uid_max}");
-            // TODO: passwd
-            let conn = Connection::system().unwrap();
-            let users: Vec<_> = AccountsService::accounts_proxy(&conn)
+            let users: Vec<_> = AccountsService::accounts_proxy()
                 .list_cached_users()
                 .unwrap()
                 .into_iter()
                 .map(|o| {
-                    let user = AccountsService::user_proxy(&conn, o);
+                    let user = AccountsService::user_proxy(o);
                     let home_directory = user.home_directory().ok();
                     let icon_file = user.icon_file().ok();
                     let language = user.language().ok();
@@ -110,6 +106,7 @@ impl UserManager {
                     )
                 })
                 .collect();
+            // TODO: passwd
             Self { users }
         })
     }

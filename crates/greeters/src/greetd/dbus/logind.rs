@@ -1,16 +1,15 @@
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
-use zbus::{blocking::Connection, proxy, zvariant::Type};
+use zbus::{proxy, zvariant::Type};
+
+use super::system_conn;
 
 pub struct LogindManager;
 impl LogindManager {
     pub fn proxy() -> &'static ManagerProxyBlocking<'static> {
         static MANAGER: OnceLock<ManagerProxyBlocking> = OnceLock::new();
-        MANAGER.get_or_init(|| {
-            let conn = Connection::system().unwrap();
-            ManagerProxyBlocking::new(&conn).unwrap()
-        })
+        MANAGER.get_or_init(|| ManagerProxyBlocking::new(system_conn()).unwrap())
     }
 }
 
