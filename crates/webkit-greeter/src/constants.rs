@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 ZaynChen <zaynchen@qq.com>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
+
 pub const APPLICATION_ID: &str = "com.github.zaynchen.webkit-greeter";
 
 pub const DEFAULT_BACKGROUND_IMAGES_DIR: &str = "/usr/share/backgrounds";
