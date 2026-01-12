@@ -305,6 +305,7 @@ fn session_to_jsc_value(context: &jsc::Context, session: &Session) -> jsc::Value
 
     value
 }
+
 fn user_to_jsc_value(context: &jsc::Context, user: &User) -> jsc::Value {
     let value = jsc::Value::new_object(context, None, None);
 

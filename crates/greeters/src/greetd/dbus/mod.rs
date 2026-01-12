@@ -1,7 +1,7 @@
-mod accountservice;
+mod accountsservice;
 mod logind;
 
-pub use accountservice::AccountsService;
+pub use accountsservice::AccountsService;
 pub use logind::LogindManager;
 
 use zbus::blocking::Connection;
