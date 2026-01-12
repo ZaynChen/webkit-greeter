@@ -4,7 +4,7 @@
 
 use std::sync::OnceLock;
 
-use super::{constants::LOGIN_UID_MINMAX, dbus::AccountsService};
+use super::dbus::AccountsService;
 
 pub struct User {
     home_directory: Option<String>,
@@ -80,33 +80,24 @@ impl UserManager {
     pub fn instance() -> &'static Self {
         static USER_MANAGER: OnceLock<UserManager> = OnceLock::new();
         USER_MANAGER.get_or_init(|| {
-            let (uid_min, uid_max) = *LOGIN_UID_MINMAX;
-            logger::warn!("UID_MIN={uid_min}, UID_MAX={uid_max}");
-            let users: Vec<_> = AccountsService::accounts_proxy()
+            let accounts_proxy = AccountsService::accounts_proxy();
+            let users: Vec<_> = accounts_proxy
                 .list_cached_users()
                 .unwrap()
                 .into_iter()
                 .map(|o| {
                     let user = AccountsService::user_proxy(o);
-                    let home_directory = user.home_directory().ok();
-                    let icon_file = user.icon_file().ok();
-                    let language = user.language().ok();
-                    let real_name = user.real_name().ok();
-                    let session = user.session().ok();
-                    let uid = user.uid().ok();
-                    let user_name = user.user_name().ok();
                     User::new(
-                        home_directory,
-                        icon_file,
-                        language,
-                        real_name,
-                        session,
-                        uid,
-                        user_name,
+                        user.home_directory().ok(),
+                        user.icon_file().ok(),
+                        user.language().ok(),
+                        user.real_name().ok(),
+                        user.session().ok(),
+                        user.uid().ok(),
+                        user.user_name().ok(),
                     )
                 })
                 .collect();
-            // TODO: passwd
             Self { users }
         })
     }
