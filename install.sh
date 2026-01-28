@@ -9,6 +9,8 @@ package() {
   sudo install -Dm0755 target/release/webkit-greeter /usr/local/bin/webkit-greeter
 
   sudo install -Dm0644 data/webkit-greeter.desktop /usr/local/share/greeters/webkit-greeter.desktop
+  # lightdm need
+  sudo install -Dm0644 data/webkit-greeter.desktop /usr/share/xgreeters/webkit-greeter.desktop
 
   sudo install -Dm0644 data/greetd.conf /etc/greetd/greetd.conf
   sudo install -Dm0644 data/hyprland.conf /usr/local/etc/greetd/hyprland.conf

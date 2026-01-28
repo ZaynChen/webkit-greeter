@@ -8,7 +8,10 @@ use webkit::{
     glib::{self, Variant, clone, variant::ToVariant},
 };
 
-use std::rc::Rc;
+use crate::{
+    common::{LanguageManager, PowerManager, SessionManager},
+    jscvalue::ToJSCValue,
+};
 
 pub struct Greeter {
     context: jsc::Context,
@@ -18,34 +21,33 @@ pub struct Greeter {
 }
 
 impl Greeter {
-    pub fn new(context: jsc::Context, webviews: Vec<WebView>) -> Self {
+    pub fn new(context: jsc::Context, webview: &WebView) -> Self {
         let greeter = lightdm::Greeter::new();
         let user_list = lightdm::UserList::instance();
 
-        let webviews = Rc::new(webviews);
         greeter.connect_authentication_complete(clone!(
-            #[weak]
-            webviews,
-            move |_| signals::authentication_complete(&webviews)
+            #[strong]
+            webview,
+            move |_| signals::authentication_complete(&webview)
         ));
         greeter.connect_autologin_timer_expired(clone!(
-            #[weak]
-            webviews,
-            move |_| signals::autologin_timer_expired(&webviews)
+            #[strong]
+            webview,
+            move |_| signals::autologin_timer_expired(&webview)
         ));
         greeter.connect_show_prompt(clone!(
-            #[weak]
+            #[strong]
             context,
-            #[weak]
-            webviews,
-            move |_, text, ty| signals::show_prompt(&webviews, &context, text, ty)
+            #[strong]
+            webview,
+            move |_, text, ty| signals::show_prompt(&webview, &context, text, ty)
         ));
         greeter.connect_show_message(clone!(
-            #[weak]
+            #[strong]
             context,
-            #[weak]
-            webviews,
-            move |_, text, ty| signals::show_message(&webviews, &context, text, ty)
+            #[strong]
+            webview,
+            move |_, text, ty| signals::show_message(&webview, &context, text, ty)
         ));
 
         if let Err(e) = greeter.connect_to_daemon_sync() {
@@ -96,7 +98,7 @@ impl Greeter {
                 "autologin_timeout" => self.autologin_timeout(),
                 "autologin_user" => self.autologin_user(),
                 "can_hibernate" => self.can_hibernate(),
-                "can_restart" => self.can_restart(),
+                "can_restart" => self.can_reboot(),
                 "can_shutdown" => self.can_shutdown(),
                 "can_suspend" => self.can_suspend(),
                 "default_session" => self.default_session(),
@@ -122,7 +124,7 @@ impl Greeter {
                 "cancel_authentication" => self.cancel_authentication(),
                 "cancel_autologin" => self.cancel_autologin(),
                 "hibernate" => self.hibernate(),
-                "restart" => self.restart(),
+                "restart" => self.reboot(),
                 "shutdown" => self.shutdown(),
                 "suspend" => self.suspend(),
                 s => {
@@ -136,7 +138,7 @@ impl Greeter {
                 "authenticate" => self.authenticate(Some(&params[0].to_string())),
                 "respond" => self.respond(&params[0].to_string()),
                 "set_language" => self.set_language(&params[0].to_string()),
-                "start_session" => self.start_session(Some(&params[0].to_string())),
+                "start_session" => self.start_session(&params[0].to_string()),
                 s => {
                     logger::warn!("{s} does not implemented");
                     jsc::Value::new_undefined(context)
@@ -148,6 +150,88 @@ impl Greeter {
             json.to_variant()
         } else {
             "undefined".to_variant()
+        }
+    }
+
+    fn can_hibernate(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, PowerManager::can_hibernate())
+    }
+
+    fn can_reboot(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, PowerManager::can_reboot())
+    }
+
+    fn can_shutdown(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, PowerManager::can_power_off())
+    }
+
+    fn can_suspend(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
+    }
+
+    fn hibernate(&self) -> jsc::Value {
+        jsc::Value::new_boolean(
+            &self.context,
+            PowerManager::hibernate()
+                .inspect_err(|e| logger::error!("{e}"))
+                .is_ok(),
+        )
+    }
+
+    fn reboot(&self) -> jsc::Value {
+        jsc::Value::new_boolean(
+            &self.context,
+            PowerManager::reboot()
+                .inspect_err(|e| logger::error!("{e}"))
+                .is_ok(),
+        )
+    }
+
+    fn shutdown(&self) -> jsc::Value {
+        jsc::Value::new_boolean(
+            &self.context,
+            PowerManager::power_off()
+                .inspect_err(|e| logger::error!("{e}"))
+                .is_ok(),
+        )
+    }
+
+    fn suspend(&self) -> jsc::Value {
+        jsc::Value::new_boolean(
+            &self.context,
+            PowerManager::suspend()
+                .inspect_err(|e| logger::error!("{e}"))
+                .is_ok(),
+        )
+    }
+
+    fn languages(&self) -> jsc::Value {
+        let context = &self.context;
+        let languages: Vec<_> = LanguageManager::languages()
+            .iter()
+            .map(|language| language.to_jscvalue(context))
+            .collect();
+        jsc::Value::new_array_from_garray(context, &languages)
+    }
+
+    fn language(&self) -> jsc::Value {
+        let context = &self.context;
+        match LanguageManager::current() {
+            Some(language) => language.to_jscvalue(context),
+            None => match LanguageManager::languages().first() {
+                Some(language) => language.to_jscvalue(context),
+                None => jsc::Value::new_undefined(context),
+            },
+        }
+    }
+
+    fn set_language(&self, language: &str) -> jsc::Value {
+        let context = &self.context;
+        if let Err(e) = self.greeter.set_language(language) {
+            logger::error!("{}", e.message());
+            jsc::Value::new_boolean(context, false)
+        } else {
+            jsc::Value::new_boolean(context, true)
         }
     }
 
@@ -177,26 +261,6 @@ impl Greeter {
         } else {
             jsc::Value::new_null(context)
         }
-    }
-
-    fn can_hibernate(&self) -> jsc::Value {
-        let value = lightdm::functions::can_hibernate();
-        jsc::Value::new_boolean(&self.context, value)
-    }
-
-    fn can_restart(&self) -> jsc::Value {
-        let value = lightdm::functions::can_restart();
-        jsc::Value::new_boolean(&self.context, value)
-    }
-
-    fn can_shutdown(&self) -> jsc::Value {
-        let value = lightdm::functions::can_shutdown();
-        jsc::Value::new_boolean(&self.context, value)
-    }
-
-    fn can_suspend(&self) -> jsc::Value {
-        let value = lightdm::functions::can_suspend();
-        jsc::Value::new_boolean(&self.context, value)
     }
 
     fn default_session(&self) -> jsc::Value {
@@ -234,26 +298,6 @@ impl Greeter {
     fn is_authenticated(&self) -> jsc::Value {
         let value = self.greeter.is_authenticated();
         jsc::Value::new_boolean(&self.context, value)
-    }
-
-    fn language(&self) -> jsc::Value {
-        let context = &self.context;
-        match lightdm::functions::language() {
-            Some(language) => language.to_jscvalue(context),
-            None => match lightdm::functions::languages().first() {
-                Some(language) => language.to_jscvalue(context),
-                None => jsc::Value::new_undefined(context),
-            },
-        }
-    }
-
-    fn languages(&self) -> jsc::Value {
-        let context = &self.context;
-        let languages: Vec<jsc::Value> = lightdm::functions::languages()
-            .iter()
-            .map(|language| language.to_jscvalue(context))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &languages)
     }
 
     fn layout(&self) -> jsc::Value {
@@ -329,7 +373,7 @@ impl Greeter {
 
     fn sessions(&self) -> jsc::Value {
         let context = &self.context;
-        let sessions: Vec<jsc::Value> = lightdm::functions::sessions()
+        let sessions: Vec<_> = SessionManager::sessions()
             .iter()
             .map(|session| session.to_jscvalue(context))
             .collect();
@@ -404,16 +448,6 @@ impl Greeter {
         jsc::Value::new_boolean(&self.context, true)
     }
 
-    fn hibernate(&self) -> jsc::Value {
-        let context = &self.context;
-        if let Err(e) = lightdm::functions::hibernate() {
-            logger::error!("{}", e.message());
-            jsc::Value::new_boolean(context, false)
-        } else {
-            jsc::Value::new_boolean(context, true)
-        }
-    }
-
     fn respond(&self, response: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.respond(response) {
@@ -424,49 +458,10 @@ impl Greeter {
         }
     }
 
-    fn restart(&self) -> jsc::Value {
+    fn start_session(&self, session: &str) -> jsc::Value {
         let context = &self.context;
-        if let Err(e) = lightdm::functions::restart() {
-            logger::error!("{}", e.message());
-            jsc::Value::new_boolean(context, false)
-        } else {
-            jsc::Value::new_boolean(context, true)
-        }
-    }
-
-    fn set_language(&self, language: &str) -> jsc::Value {
-        let context = &self.context;
-        if let Err(e) = self.greeter.set_language(language) {
-            logger::error!("{}", e.message());
-            jsc::Value::new_boolean(context, false)
-        } else {
-            jsc::Value::new_boolean(context, true)
-        }
-    }
-
-    fn shutdown(&self) -> jsc::Value {
-        let context = &self.context;
-        if let Err(e) = lightdm::functions::shutdown() {
-            logger::error!("{}", e.message());
-            jsc::Value::new_boolean(context, false)
-        } else {
-            jsc::Value::new_boolean(context, true)
-        }
-    }
-
-    fn suspend(&self) -> jsc::Value {
-        let context = &self.context;
-        if let Err(e) = lightdm::functions::suspend() {
-            logger::error!("{}", e.message());
-            jsc::Value::new_boolean(context, false)
-        } else {
-            jsc::Value::new_boolean(context, true)
-        }
-    }
-
-    fn start_session(&self, session: Option<&str>) -> jsc::Value {
-        let context = &self.context;
-        if let Err(e) = self.greeter.start_session_sync(session) {
+        logger::info!("{session}");
+        if let Err(e) = self.greeter.start_session_sync(Some(session)) {
             logger::error!("{}", e.message());
             jsc::Value::new_boolean(context, false)
         } else {
@@ -483,73 +478,61 @@ mod signals {
         prelude::WebViewExt,
     };
 
-    pub(super) fn authentication_complete(webviews: &[WebView]) {
-        webviews.iter().for_each(|webview| {
-            let parameters = ["authentication_complete", "[]"].to_variant();
-            let message = UserMessage::new("greeter", Some(&parameters));
-            webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
-        });
+    pub(super) fn authentication_complete(webview: &WebView) {
+        let parameters = ["authentication_complete", "[]"].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 
-    pub(super) fn autologin_timer_expired(webviews: &[WebView]) {
-        webviews.iter().for_each(|webview| {
-            let parameters = ["autologin_timer_expired", "[]"].to_variant();
-            let message = UserMessage::new("greeter", Some(&parameters));
-            webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
-        });
+    pub(super) fn autologin_timer_expired(webview: &WebView) {
+        let parameters = ["autologin_timer_expired", "[]"].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 
     pub(super) fn show_prompt(
-        webviews: &[WebView],
+        webview: &WebView,
         context: &jsc::Context,
         text: &str,
         ty: lightdm::PromptType,
     ) {
-        webviews.iter().for_each(|webview| {
-            let param = jsc::Value::new_array_from_garray(
-                context,
-                &[
-                    jsc::Value::new_string(context, Some(text)),
-                    jsc::Value::new_number(context, ty.into_glib() as f64),
-                ],
-            )
-            .to_json(0)
-            .expect("param parse to json failed");
-            let parameters = ["show_prompt", &param].to_variant();
-            let message = UserMessage::new("greeter", Some(&parameters));
-            webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
-        });
+        let param = jsc::Value::new_array_from_garray(
+            context,
+            &[
+                jsc::Value::new_string(context, Some(text)),
+                jsc::Value::new_number(context, ty.into_glib() as f64),
+            ],
+        )
+        .to_json(0)
+        .expect("param parse to json failed");
+        let parameters = ["show_prompt", &param].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 
     pub(super) fn show_message(
-        webviews: &[WebView],
+        webview: &WebView,
         context: &jsc::Context,
         text: &str,
         ty: lightdm::MessageType,
     ) {
-        webviews.iter().for_each(|webview| {
-            let param = jsc::Value::new_array_from_garray(
-                context,
-                &[
-                    jsc::Value::new_string(context, Some(text)),
-                    jsc::Value::new_number(context, ty.into_glib() as f64),
-                ],
-            )
-            .to_json(0)
-            .expect("param parse to json failed");
+        let param = jsc::Value::new_array_from_garray(
+            context,
+            &[
+                jsc::Value::new_string(context, Some(text)),
+                jsc::Value::new_number(context, ty.into_glib() as f64),
+            ],
+        )
+        .to_json(0)
+        .expect("param parse to json failed");
 
-            let parameters = ["show_message", &param].to_variant();
-            let message = UserMessage::new("greeter", Some(&parameters));
-            webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
-        });
+        let parameters = ["show_message", &param].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 }
 
 use jsc::JSCValueExtManual;
-
-trait ToJSCValue {
-    fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value;
-}
 
 impl ToJSCValue for lightdm::User {
     fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value {
@@ -637,31 +620,6 @@ impl ToJSCValue for lightdm::Session {
         value.object_set_property(
             "type",
             &jsc::Value::new_string(context, session_type.as_ref().map(|s| s.as_str())),
-        );
-
-        value
-    }
-}
-
-impl ToJSCValue for lightdm::Language {
-    fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value {
-        let value = jsc::Value::new_object(context, None, None);
-
-        let code = self.code();
-        let name = self.name();
-        let territory = self.territory();
-
-        value.object_set_property(
-            "code",
-            &jsc::Value::new_string(context, code.as_ref().map(|s| s.as_str())),
-        );
-        value.object_set_property(
-            "name",
-            &jsc::Value::new_string(context, name.as_ref().map(|s| s.as_str())),
-        );
-        value.object_set_property(
-            "territory",
-            &jsc::Value::new_string(context, territory.as_ref().map(|s| s.as_str())),
         );
 
         value

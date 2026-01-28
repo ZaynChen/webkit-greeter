@@ -487,15 +487,13 @@ class GreeterConfig {
 
 class ThemeUtils {
   #time_language;
-  constructor() {
-    this.#time_language = send_request(
-      "greeter_config",
-      "greeter",
-    ).time_language;
+  constructor(time_language = "") {
+    this.#time_language = time_language;
   }
   #send_request(method, args) {
     return send_request("theme_utils", method, args);
   }
+
   /**
    * Returns the contents of directory found at `path` provided that the (normalized) `path`
    * meets at least one of the following conditions:
@@ -535,8 +533,9 @@ class ThemeUtils {
   }
   get_current_localized_date() {
     const locales = [];
-    if (this.#time_language !== "") {
-      locales.push(this.#time_language);
+    const time_language = this.#time_language;
+    if ("" !== time_language) {
+      locales.push(time_language);
     }
     return new Intl.DateTimeFormat(locales, {
       day: "2-digit",
@@ -557,8 +556,9 @@ class ThemeUtils {
    */
   get_current_localized_time() {
     const locales = [];
-    if (this.#time_language !== "") {
-      locales.push(this.#time_language);
+    const time_language = this.#time_language;
+    if ("" !== time_language) {
+      locales.push(time_language);
     }
     return new Intl.DateTimeFormat(locales, {
       hour: "2-digit",
@@ -569,7 +569,8 @@ class ThemeUtils {
 
 window.greeter_comm = new GreeterComm();
 window.greeter_config = new GreeterConfig();
-window.lightdm = new LightDMGreeter();
-window.theme_utils = new ThemeUtils();
+window.greeter = new Greeter();
+window.theme_utils = new ThemeUtils(window.greeter.time_language);
+window.lightdm = window.greeter;
 window._ready_event = new Event("GreeterReady");
 window.dispatch_ready_event = () => dispatchEvent(window._ready_event);

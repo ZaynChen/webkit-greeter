@@ -78,7 +78,6 @@ class Signal {
   }
   _emit(...args) {
     this.#callbacks.forEach((cb) => {
-      console.log("test");
       cb(...args);
     });
   }
@@ -315,6 +314,4 @@ window.greeter = new Greeter();
 window.theme_utils = new ThemeUtils(window.greeter.time_language);
 window.lightdm = window.greeter;
 window._ready_event = new Event("GreeterReady");
-window.dispatch_ready_event = () => {
-  dispatchEvent(window._ready_event);
-};
+window.dispatch_ready_event = () => dispatchEvent(window._ready_event);

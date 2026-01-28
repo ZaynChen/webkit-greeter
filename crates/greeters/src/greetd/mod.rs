@@ -2,12 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-mod accounts;
 mod client;
-mod dbus;
-mod language;
-mod power;
-mod session;
+use client::GreetdClient;
 
 use greetd_ipc::Response;
 use jsc::JSCValueExtManual;
@@ -18,11 +14,10 @@ use webkit::{
 
 use std::cell::RefCell;
 
-use accounts::{User, UserManager};
-use client::GreetdClient;
-use language::{Language, LanguageManager};
-use power::PowerManager;
-use session::{Session, SessionManager};
+use crate::{
+    common::{LanguageManager, PowerManager, SessionManager, UserManager},
+    jscvalue::ToJSCValue,
+};
 
 pub struct Greeter {
     context: jsc::Context,
@@ -50,38 +45,21 @@ impl Greeter {
         let params = jsc::Value::from_json(context, json_params).to_vec();
         let ret = if params.is_empty() {
             match name {
-                // "autologin_guest" => self.autologin_guest(),
-                // "autologin_timeout" => self.autologin_timeout(),
-                // "autologin_user" => self.autologin_user(),
                 "can_hibernate" => self.can_hibernate(),
                 "can_restart" => self.can_reboot(),
                 "can_shutdown" => self.can_shutdown(),
                 "can_suspend" => self.can_suspend(),
-                // "default_session" => self.default_session(),
-                // "has_guest_account" => self.has_guest_account(),
-                // "hide_users_hint" => self.hide_users_hint(),
-                // "hostname" => self.hostname(),
-                "authentication_user" => self.authentication_user(),
-                "in_authentication" => self.in_authentication(),
-                "is_authenticated" => self.is_authenticated(),
-                "language" => self.language(),
-                "languages" => self.languages(),
-                // "layout" => self.layout(),
-                // "layouts" => self.layouts(),
-                // "lock_hint" => self.lock_hint(),
-                // "remote_sessions" => self.remote_sessions(),
-                // "select_guest_hint" => self.select_guest_hint(),
-                // "select_user_hint" => self.select_user_hint(),
-                "sessions" => self.sessions(),
-                // "show_manual_login_hint" => self.show_manual_login_hint(),
-                // "show_remote_login_hint" => self.show_remote_login_hint(),
-                "users" => self.users(),
-                // "authenticate_as_guest" => self.authenticate_as_guest(),
-                // "cancel_autologin" => self.cancel_autologin(),
                 "hibernate" => self.hibernate(),
                 "restart" => self.reboot(),
                 "shutdown" => self.shutdown(),
                 "suspend" => self.suspend(),
+                "language" => self.language(),
+                "languages" => self.languages(),
+                "sessions" => self.sessions(),
+                "users" => self.users(),
+                "authentication_user" => self.authentication_user(),
+                "in_authentication" => self.in_authentication(),
+                "is_authenticated" => self.is_authenticated(),
                 "cancel_authentication" => self.cancel_authentication(),
                 s => {
                     logger::warn!("{s} does not implemented");
@@ -90,7 +68,6 @@ impl Greeter {
             }
         } else {
             match name {
-                // "layout" => self.set_layout(params[0].clone()),
                 "set_language" => self.set_language(&params[0].to_string()),
                 "authenticate" => self.authenticate(params[0].to_string()),
                 "respond" => self.respond(params[0].to_string()),
@@ -123,72 +100,6 @@ impl Greeter {
 
     fn can_suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
-    }
-
-    fn authentication_user(&self) -> jsc::Value {
-        jsc::Value::new_string(&self.context, self.greeter.borrow().authentication_user())
-    }
-
-    fn in_authentication(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, self.greeter.borrow().in_authentication())
-    }
-
-    fn is_authenticated(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, self.greeter.borrow().is_authenticated())
-    }
-
-    fn language(&self) -> jsc::Value {
-        let context = &self.context;
-        match LanguageManager::current() {
-            Some(language) => language_to_jsc_value(context, &language),
-            None => match LanguageManager::languages().first() {
-                Some(language) => language_to_jsc_value(context, language),
-                None => jsc::Value::new_undefined(context),
-            },
-        }
-    }
-
-    fn set_language(&self, language: &str) -> jsc::Value {
-        let context = &self.context;
-        if let Some(user) = self.greeter.borrow().authentication_user() {
-            if let Err(e) = UserManager::set_language(user, language) {
-                logger::error!("{e}");
-                jsc::Value::new_boolean(context, false)
-            } else {
-                jsc::Value::new_boolean(context, true)
-            }
-        } else {
-            logger::error!("No user is in authentication");
-            jsc::Value::new_boolean(context, false)
-        }
-    }
-
-    fn languages(&self) -> jsc::Value {
-        let context = &self.context;
-        let languages: Vec<_> = LanguageManager::languages()
-            .iter()
-            .map(|language| language_to_jsc_value(context, language))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &languages)
-    }
-
-    fn sessions(&self) -> jsc::Value {
-        let context = &self.context;
-        let sessions: Vec<_> = SessionManager::sessions()
-            .iter()
-            .map(|session| session_to_jsc_value(context, session))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &sessions)
-    }
-
-    fn users(&self) -> jsc::Value {
-        let context = &self.context;
-        let users: Vec<_> = UserManager::instance()
-            .list_users()
-            .iter()
-            .map(|user| user_to_jsc_value(context, user))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &users)
     }
 
     fn hibernate(&self) -> jsc::Value {
@@ -225,6 +136,72 @@ impl Greeter {
                 .inspect_err(|e| logger::error!("{e}"))
                 .is_ok(),
         )
+    }
+
+    fn authentication_user(&self) -> jsc::Value {
+        jsc::Value::new_string(&self.context, self.greeter.borrow().authentication_user())
+    }
+
+    fn in_authentication(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, self.greeter.borrow().in_authentication())
+    }
+
+    fn is_authenticated(&self) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, self.greeter.borrow().is_authenticated())
+    }
+
+    fn language(&self) -> jsc::Value {
+        let context = &self.context;
+        match LanguageManager::current() {
+            Some(language) => language.to_jscvalue(context),
+            None => match LanguageManager::languages().first() {
+                Some(language) => language.to_jscvalue(context),
+                None => jsc::Value::new_undefined(context),
+            },
+        }
+    }
+
+    fn set_language(&self, language: &str) -> jsc::Value {
+        let context = &self.context;
+        if let Some(user) = self.greeter.borrow().authentication_user() {
+            if let Err(e) = UserManager::set_language(user, language) {
+                logger::error!("{e}");
+                jsc::Value::new_boolean(context, false)
+            } else {
+                jsc::Value::new_boolean(context, true)
+            }
+        } else {
+            logger::error!("No user is in authentication");
+            jsc::Value::new_boolean(context, false)
+        }
+    }
+
+    fn languages(&self) -> jsc::Value {
+        let context = &self.context;
+        let languages: Vec<_> = LanguageManager::languages()
+            .iter()
+            .map(|language| language.to_jscvalue(context))
+            .collect();
+        jsc::Value::new_array_from_garray(context, &languages)
+    }
+
+    fn sessions(&self) -> jsc::Value {
+        let context = &self.context;
+        let sessions: Vec<_> = SessionManager::sessions()
+            .iter()
+            .map(|session| session.to_jscvalue(context))
+            .collect();
+        jsc::Value::new_array_from_garray(context, &sessions)
+    }
+
+    fn users(&self) -> jsc::Value {
+        let context = &self.context;
+        let users: Vec<_> = UserManager::instance()
+            .list_users()
+            .iter()
+            .map(|user| user.to_jscvalue(context))
+            .collect();
+        jsc::Value::new_array_from_garray(context, &users)
     }
 
     fn authenticate(&self, username: String) -> jsc::Value {
@@ -288,75 +265,6 @@ impl Greeter {
         }
         jsc::Value::new_boolean(&self.context, false)
     }
-}
-
-fn session_to_jsc_value(context: &jsc::Context, session: &Session) -> jsc::Value {
-    let value = jsc::Value::new_object(context, None, None);
-
-    let comment = session.comment();
-    let key = session.key();
-    let name = session.name();
-    let session_type = session.type_();
-
-    value.object_set_property("comment", &jsc::Value::new_string(context, Some(comment)));
-    value.object_set_property("key", &jsc::Value::new_string(context, Some(key)));
-    value.object_set_property("name", &jsc::Value::new_string(context, Some(name)));
-    value.object_set_property("type", &jsc::Value::new_string(context, Some(session_type)));
-
-    value
-}
-
-fn user_to_jsc_value(context: &jsc::Context, user: &User) -> jsc::Value {
-    let value = jsc::Value::new_object(context, None, None);
-
-    let username = user.user_name();
-    let real_name = user.real_name().filter(|n| !n.is_empty());
-    let display_name = if real_name.is_some() {
-        real_name
-    } else {
-        user.user_name()
-    };
-    let home_directory = user.home_directory();
-    let image = user.icon_file();
-    let language = user.language();
-    let logged_in = user
-        .uid()
-        .map(|uid| SessionManager::is_logged_in(uid as u32))
-        .unwrap_or_default();
-    let session = user.session();
-
-    value.object_set_property(
-        "display_name",
-        &jsc::Value::new_string(context, display_name),
-    );
-    value.object_set_property(
-        "home_directory",
-        &jsc::Value::new_string(context, home_directory),
-    );
-    value.object_set_property("image", &jsc::Value::new_string(context, image));
-    value.object_set_property("language", &jsc::Value::new_string(context, language));
-    value.object_set_property("logged_in", &jsc::Value::new_boolean(context, logged_in));
-    value.object_set_property("session", &jsc::Value::new_string(context, session));
-    value.object_set_property("username", &jsc::Value::new_string(context, username));
-
-    value
-}
-
-fn language_to_jsc_value(context: &jsc::Context, language: &Language) -> jsc::Value {
-    let value = jsc::Value::new_object(context, None, None);
-
-    let code = language.code();
-    let name = language.name();
-    let territory = language.territory();
-
-    value.object_set_property("code", &jsc::Value::new_string(context, Some(code)));
-    value.object_set_property("name", &jsc::Value::new_string(context, Some(name)));
-    value.object_set_property(
-        "territory",
-        &jsc::Value::new_string(context, Some(territory)),
-    );
-
-    value
 }
 
 mod signals {
