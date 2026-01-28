@@ -14,7 +14,7 @@ enum AuthStatus {
     InAuthentication,
 }
 
-type AuthenticationComplete = Option<Box<dyn Fn(&GreetdClient)>>;
+type AuthenticationComplete = Box<dyn Fn(&GreetdClient)>;
 pub type GreetdResult = Result<Response, greetd_ipc::codec::Error>;
 
 /// Greetd client for communicating with greetd service
@@ -41,7 +41,7 @@ pub struct GreetdClient {
     ///               -> PostResponse  -> ERROR
     auth_status: AuthStatus,
     /// Callback invoked when AuthStatus switch to Authenticated
-    authentication_complete: AuthenticationComplete,
+    authentication_complete: Vec<AuthenticationComplete>,
 }
 
 impl GreetdClient {
@@ -60,7 +60,7 @@ impl GreetdClient {
             socket,
             auth_user: None,
             auth_status: AuthStatus::NotStarted,
-            authentication_complete: None,
+            authentication_complete: Vec::new(),
         }
     }
 
@@ -68,15 +68,15 @@ impl GreetdClient {
     where
         F: Fn(&Self) + 'static,
     {
-        self.authentication_complete = Some(Box::new(f));
+        self.authentication_complete.push(Box::new(f));
     }
 
     fn set_auth_status(&mut self, status: AuthStatus) {
         self.auth_status = status;
-        if self.is_authenticated()
-            && let Some(callback) = &self.authentication_complete
-        {
-            callback(self);
+        if self.is_authenticated() && !self.authentication_complete.is_empty() {
+            self.authentication_complete
+                .iter()
+                .for_each(|callback| callback(self));
         }
     }
 
