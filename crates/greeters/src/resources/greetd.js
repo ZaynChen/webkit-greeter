@@ -311,7 +311,9 @@ class ThemeUtils {
 window.greeter_comm = new GreeterComm();
 window.greeter_config = new GreeterConfig();
 window.greeter = new Greeter();
-window.theme_utils = new ThemeUtils(window.greeter.time_language);
+window.theme_utils = new ThemeUtils(
+  window.greeter_config.greeter.time_language,
+);
 window.lightdm = window.greeter;
 window._ready_event = new Event("GreeterReady");
 window.dispatch_ready_event = () => dispatchEvent(window._ready_event);
