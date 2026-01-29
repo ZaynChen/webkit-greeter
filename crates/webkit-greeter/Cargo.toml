@@ -1,28 +1,27 @@
 [package]
 name = "webkit-greeter"
 version = "0.1.0"
-authors.workspace = true
 edition.workspace = true
 description = "WebKit Greeter"
 repository.workspace = true
 license = "GPL-3.0-or-later"
-keywords = ["webkit", "greeter", "greetd", "lightdm"]
+keywords = ["greetd", "greeter", "lightdm", "webkit"]
 categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
 clap = { version = "4.5.46", features = ["derive"] }
-serde = { version = "1.0.219", features = ["derive"] }
-toml = { version = "0.9.8", features = ["serde"] }
-logger.workspace = true
-gtk.workspace = true
-webkit.workspace = true
-jsc.workspace = true
-greeters.workspace = true
 gdkx = { package = "gdk4-x11", version = "0.10", features = [
   "xlib",
 ], optional = true }
+greeters.workspace = true
+gtk.workspace = true
+jsc.workspace = true
 lazy_static = "1.5.0"
+logger.workspace = true
+serde = { version = "1.0.219", features = ["derive"] }
+toml = { version = "0.9.8", features = ["serde"] }
+webkit.workspace = true
 
 [build-dependencies]
 glib-build-tools = "0.21.0"

@@ -1,27 +1,26 @@
 [package]
 name = "greeters"
 version = "0.1.0"
-authors.workspace = true
 edition.workspace = true
 description = "greeters for WebKit Greeter"
 repository.workspace = true
 license = "GPL-3.0-or-later AND LGPL-3.0-or-later"
-keywords = ["webkit", "greeter", "greetd", "lightdm"]
+keywords = ["greetd", "greeter", "lightdm", "webkit"]
 categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
-jsc.workspace = true
-logger.workspace = true
-webkit.workspace = true
-lightdm = { git = "https://github.com/ZaynChen/lightdm-rs.git", version = "0.1.0", optional = true }
-greetd_ipc = { version = "0.10", features = ["sync-codec"] }
-libc = "0.2.177"
-pwd = "1.4.0"
 gettext-rs = "0.7.7"
-zbus = "5.12.0"
-serde = "1.0.228"
+greetd_ipc = { version = "0.10", features = ["sync-codec"] }
+jsc.workspace = true
 lazy_static = "1.5.0"
+libc = "0.2.177"
+lightdm = { git = "https://github.com/ZaynChen/lightdm-rs.git", version = "0.1.0", optional = true }
+logger.workspace = true
+pwd = "1.4.0"
+serde = "1.0.228"
+webkit.workspace = true
+zbus = "5.12.0"
 
 [build-dependencies]
 glib-build-tools = "0.21.0"

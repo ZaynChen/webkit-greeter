@@ -1,26 +1,25 @@
 [workspace]
 resolver = "3"
 members = [
+  "crates/greeters",
   "crates/jsc6",
   "crates/logger",
-  "crates/greeters",
   "crates/webkit-greeter",
   "crates/webkit-greeter-webext",
 ]
 default-members = ["crates/webkit-greeter", "crates/webkit-greeter-webext"]
 
 [workspace.package]
-authors = ["Zayn Chen <zaynchen@qq.com>"]
 edition = "2024"
 repository = "https://github.com/zaynchen/webkit-greeter"
 
 [workspace.dependencies]
+greeters = { path = "crates/greeters" }
 gtk = { package = "gtk4", version = "0.10", features = ["v4_20"] }
-webkit = { package = "webkit6", version = "0.5", features = ["v2_50"] }
-jsc6 = { package = "javascriptcore6", version = "0.5", features = ["v2_48"] }
 jsc = { package = "jsc6", path = "crates/jsc6", version = "0.5" }
+jsc6 = { package = "javascriptcore6", version = "0.5", features = ["v2_48"] }
+logger = { path = "crates/logger" }
+webkit = { package = "webkit6", version = "0.5", features = ["v2_50"] }
 wwpe = { package = "webkit-web-process-extension6", version = "0.5", features = [
   "v2_48",
 ] }
-logger = { path = "crates/logger" }
-greeters = { path = "crates/greeters" }
