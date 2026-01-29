@@ -24,6 +24,11 @@ echo "Display manager: $dm"
 
 build() {
   cargo build --release --locked --no-default-features --features webkit-greeter/$dm
+
+  CURR_DIR=$(pwd)
+  cd themes/lightdm-webkit-theme-litarvan
+  ./build.sh
+  cd $CURR_DIR
 }
 
 package() {
@@ -52,6 +57,19 @@ package() {
 
   sudo install -Dm0755 target/release/libwebkit_greeter_webext.so /usr/local/lib/webkit-greeter/libwebkit-greeter-webext.so
   sudo install -Dm0755 target/release/webkit-greeter /usr/local/bin/webkit-greeter
+
+  [ -d /usr/local/share/webkit-greeter/themes/ ] || sudo mkdir -p /usr/local/share/webkit-greeter/themes/
+
+  CURR_DIR=$(pwd)
+  cd themes/lightdm-webkit-theme-litarvan
+  VERSION=$(cat version)
+  sudo rm -r /usr/local/share/webkit-greeter/themes/litarvan/
+  sudo mkdir /usr/local/share/webkit-greeter/themes/litarvan/
+  sudo cp ./lightdm-webkit-theme-litarvan-$VERSION.tar.gz /usr/local/share/webkit-greeter/themes/litarvan/
+
+  cd /usr/local/share/webkit-greeter/themes/litarvan/
+  sudo tar -xvf lightdm-webkit-theme-litarvan-$VERSION.tar.gz
+  cd $CURR_DIR
 }
 
 build

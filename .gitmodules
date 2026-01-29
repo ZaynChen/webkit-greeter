@@ -1,0 +1,3 @@
+[submodule "themes/lightdm-webkit-theme-litarvan"]
+	path = themes/lightdm-webkit-theme-litarvan
+	url = https://github.com/ZaynChen/lightdm-webkit-theme-litarvan

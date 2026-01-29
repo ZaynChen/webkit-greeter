@@ -1,7 +1,7 @@
 # themes_dir = Path to directory that contains themes. Default to "/usr/share/webkit-greeter/themes"
 # primary_monitor = Primary monitor to display the greeter on. Set to None to use monitor ID 0 as the primary monitor.
 #   e.g. "1", "DP-1", "HDMI-A-1"
-themes_dir = "/usr/share/web-greeter/themes"
+# themes_dir = "/usr/share/web-greeter/themes"
 primary_monitor = "1"
 
 # [branding]
