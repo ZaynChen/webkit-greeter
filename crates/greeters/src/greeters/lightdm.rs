@@ -461,7 +461,6 @@ impl LightDMGreeter {
 
     pub(super) fn start_session(&self, session: &str) -> jsc::Value {
         let context = &self.context;
-        logger::info!("{session}");
         if let Err(e) = self.greeter.start_session_sync(Some(session)) {
             logger::error!("{}", e.message());
             jsc::Value::new_boolean(context, false)

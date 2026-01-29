@@ -17,11 +17,6 @@ pub fn window_object_cleared(
     api_script: &str,
     signal_init: &Cell<bool>,
 ) {
-    logger::debug!(
-        "window_object_cleared: page_id={}, frame_id={}",
-        page.id(),
-        frame.id()
-    );
     let context = frame.js_context_for_script_world(world).unwrap();
     let global_object = context.global_object().unwrap();
 
@@ -35,7 +30,6 @@ pub fn window_object_cleared(
     // the signals only once.
     if signal_init.get() {
         page.connect_document_loaded(move |_| {
-            logger::debug!("document_loaded.dispatch_ready_event");
             global_object
                 .object_get_property("dispatch_ready_event")
                 .filter(jsc::Value::is_function)
@@ -83,7 +77,7 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                     .to_json(0)
                     .unwrap_or("[]".into());
 
-                logger::debug!("{target}.{method}({params})");
+                // logger::debug!("{target}.{method}({params})");
                 let message =
                     UserMessage::new(&target, Some(&[method.as_str(), &params].to_variant()));
                 MainContext::default()
@@ -130,7 +124,7 @@ fn user_message_received(message: &UserMessage, context: &jsc::Context) -> bool 
     let name = name_var.str().unwrap();
     let json_params = params_var.str().unwrap();
 
-    // logger::info!("{}.{name}({json_params})", message.name().unwrap());
+    // logger::debug!("{}.{name}({json_params})", message.name().unwrap());
     match message.name().as_deref() {
         Some("greeter") => {
             let _ = context

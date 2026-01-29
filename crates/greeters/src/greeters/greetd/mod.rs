@@ -256,7 +256,6 @@ impl GreetdGreeter {
             "x" => vec!["XDG_SESSION_TYPE=x11".to_string()],
             _ => vec![],
         };
-        logger::info!("{cmd:?}-{env:?}");
         match self.greeter.borrow_mut().start_session(cmd, env) {
             Ok(Response::Success) => std::process::exit(0),
             Ok(Response::Error { description, .. }) => logger::error!("{description}"),

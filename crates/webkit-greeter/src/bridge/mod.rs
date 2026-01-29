@@ -71,7 +71,7 @@ mod dispatcher {
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::Greeter((method, json_params)) => {
-                    logger::debug!("greeter.{method}({json_params})");
+                    // logger::debug!("greeter.{method}({json_params})");
                     let reply = self.greeter.handle(&method, &json_params);
                     UserMessage::new("reply", Some(&reply))
                 }

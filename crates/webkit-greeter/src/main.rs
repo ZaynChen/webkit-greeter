@@ -34,19 +34,10 @@ fn main() -> glib::ExitCode {
     unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
 
     logger::logger_init(logger::LevelFilter::Debug);
-    eprintln!("username={:?}", glib::user_name());
-    eprintln!("cache={:?}", glib::user_cache_dir());
-    eprintln!("config={:?}", glib::user_config_dir());
-    eprintln!("data={:?}", glib::user_data_dir());
-    eprintln!("runtime={:?}", glib::user_runtime_dir());
-    eprintln!("sys-config={:?}", glib::system_config_dirs());
-    eprintln!("sys-data={:?}", glib::system_data_dirs());
-    eprintln!("{:?}", std::env::vars());
 
     let dm = current_display_manager();
     let args = CliArgs::parse();
     let config = Config::new(args.debug_mode(), args.theme(), &dm);
-    eprintln!("{config:?}");
 
     if args.list {
         print_themes(config.themes_dir());

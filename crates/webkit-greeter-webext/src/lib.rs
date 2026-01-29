@@ -20,13 +20,11 @@ use wwpe::{
 use std::{cell::Cell, rc::Rc};
 
 fn page_created(page: &WebPage, secure_mode: bool, detect_theme_errors: bool) {
-    logger::debug!("page_created");
     let stop_prompts = Rc::new(Cell::new(false));
     page.connect_document_loaded(clone!(
         #[strong]
         stop_prompts,
         move |page| {
-            logger::debug!("document_loaded.send(ready-to-show)");
             stop_prompts.set(false);
             let message = wwpe::UserMessage::new("ready-to-show", None);
             page.send_message_to_view(&message, Cancellable::NONE, |_| {});

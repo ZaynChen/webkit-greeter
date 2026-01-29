@@ -19,7 +19,6 @@ pub(super) struct Greeter {
 
 impl Greeter {
     pub fn new(context: jsc::Context, webview: &WebView, display_manager: &str) -> Self {
-        logger::info!("greeter new");
         match display_manager {
             #[cfg(feature = "greetd")]
             "greetd" => Self {

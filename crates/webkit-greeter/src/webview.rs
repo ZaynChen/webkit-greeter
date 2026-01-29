@@ -37,7 +37,6 @@ pub fn primary_user_message_received(
 ) -> bool {
     match message.name().as_deref() {
         Some("ready-to-show") => {
-            logger::debug!("primary ready-to-show");
             let root = webview.root().expect("webview.root is None");
             let window = root
                 .downcast_ref::<ApplicationWindow>()
@@ -62,7 +61,6 @@ pub fn secondary_user_message_received(webview: &WebView, message: &UserMessage)
     if !matches!(message.name().as_deref(), Some("ready-to-show")) {
         return false;
     }
-    logger::debug!("secondary ready-to-show");
     let root = webview.root().expect("webview.root is None");
     let window = root
         .downcast_ref::<ApplicationWindow>()
