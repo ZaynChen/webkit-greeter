@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod greeter;
 mod greeter_comm;
 mod greeter_config;
 mod theme_utils;
@@ -9,13 +10,13 @@ mod theme_utils;
 pub use dispatcher::Dispatcher;
 
 mod dispatcher {
-    use greeters::Greeter;
     use webkit::{UserMessage, WebView, gtk::glib::VariantTy};
 
     use crate::config::Config;
 
     use super::{
-        greeter_comm::GreeterComm, greeter_config::GreeterConfig, theme_utils::ThemeUtils,
+        greeter::Greeter, greeter_comm::GreeterComm, greeter_config::GreeterConfig,
+        theme_utils::ThemeUtils,
     };
 
     pub struct Dispatcher {
@@ -31,6 +32,7 @@ mod dispatcher {
             context: jsc::Context,
             primary: WebView,
             secondaries: Vec<WebView>,
+            display_manager: &str,
         ) -> Self {
             let allowed_dirs = [
                 config.themes_dir().to_string(),
@@ -38,7 +40,7 @@ mod dispatcher {
             ];
             Self {
                 theme_utils: ThemeUtils::new(context.clone(), &allowed_dirs, config.theme()),
-                greeter: Greeter::new(context.clone(), &primary),
+                greeter: Greeter::new(context.clone(), &primary, display_manager),
                 greeter_config: GreeterConfig::new(context.clone(), config),
                 greeter_comm: GreeterComm::new(context.clone(), primary, secondaries),
             }

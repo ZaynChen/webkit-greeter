@@ -1,18 +1,18 @@
 // SPDX-FileCopyrightText: 2025 ZaynChen <zaynchen@qq.com>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
+
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 mod common;
 mod jscvalue;
 
-#[cfg(all(feature = "lightdm", not(feature = "greetd")))]
-mod lightdm;
-#[cfg(all(feature = "lightdm", not(feature = "greetd")))]
-pub use lightdm::Greeter;
-
-#[cfg(all(feature = "greetd", not(feature = "lightdm")))]
-mod greetd;
-#[cfg(all(feature = "greetd", not(feature = "lightdm")))]
-pub use greetd::Greeter;
+mod greeters;
+#[cfg(feature = "greetd")]
+pub use greeters::GreetdGreeter;
+#[cfg(feature = "lightdm")]
+pub use greeters::LightDMGreeter;
 
 use webkit::{
     gio::{File, resources_register_include},
@@ -24,8 +24,7 @@ pub fn register_api_resource() {
         .expect("Failed to register greeters resources.");
 }
 
-pub fn greeter_api() -> String {
-    let dm = current_display_manager();
+pub fn greeter_api(dm: &str) -> String {
     let uri = format!("resource:///com/github/zaynchen/webkit-greeter/{dm}.js");
 
     match File::for_uri(&uri).load_contents(webkit::gio::Cancellable::NONE) {
@@ -36,29 +35,3 @@ pub fn greeter_api() -> String {
         }
     }
 }
-
-// Get current displaymanager managed by systemd.
-fn current_display_manager() -> String {
-    match std::process::Command::new("systemctl")
-        .arg("--property=Id")
-        .arg("show")
-        .arg("display-manager")
-        .output()
-    {
-        Ok(output) => String::from_utf8(output.stdout)
-            .expect("The output of 'systemctl show display-manager' is not encoded as utf8")
-            .trim()
-            .strip_prefix("Id=")
-            .unwrap()
-            .strip_suffix(".service")
-            .unwrap()
-            .to_string(),
-        Err(e) => {
-            logger::error!("Failed to get current display manager by systemd: {e}");
-            "".to_string()
-        }
-    }
-}
-
-#[cfg(all(feature = "lightdm", feature = "greetd"))]
-compile_error!("multiple greeter features set");

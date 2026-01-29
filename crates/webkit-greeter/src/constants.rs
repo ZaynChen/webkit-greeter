@@ -13,13 +13,6 @@ pub const GREETER_RESOURCE_PREFIX: &str = "/com/github/zaynchen/webkit-greeter";
 pub const WEBKIT_APPLICATION_INFO: &str = "com.github.zaynchen.webkit-greeter";
 
 lazy_static::lazy_static! {
-    pub static ref CONFIG_PATH: &'static str = {
-        ["/usr/local/etc/greetd/webkit-greeter.toml", "/etc/greetd/webkit-greeter.toml"]
-            .iter()
-            .find(|path| std::path::Path::new(path).is_file())
-            .expect("Neither \"/usr/local/etc/greetd/webkit-greeter.toml\" nor \"/etc/greetd/webkit-greeter.toml\" exist")
-    };
-
     pub static ref DEFAULT_THEME_DIR: String = {
         gtk::glib::system_data_dirs()
             .iter()

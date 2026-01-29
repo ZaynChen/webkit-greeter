@@ -2,6 +2,7 @@ use jsc::JSCValueExtManual;
 
 use crate::common::{Language, Session, SessionManager, User};
 
+#[allow(dead_code)]
 pub trait ToJSCValue {
     fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value;
 }

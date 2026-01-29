@@ -24,4 +24,3 @@ wwpe = { package = "webkit-web-process-extension6", version = "0.5", features = 
 ] }
 logger = { path = "crates/logger" }
 greeters = { path = "crates/greeters" }
-

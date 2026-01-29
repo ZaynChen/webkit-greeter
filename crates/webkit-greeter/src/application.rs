@@ -19,9 +19,9 @@ use crate::{
     window::setup_window,
 };
 
-pub fn on_activate(app: &Application, config: &Config) {
+pub fn on_activate(app: &Application, config: &Config, dm: &str) {
     {
-        let api = greeters::greeter_api();
+        let api = greeters::greeter_api(dm);
         let webcontext = WebContext::default().expect("default web context does not exist");
         webcontext.set_cache_model(CacheModel::DocumentViewer);
         let secure_mode = config.secure_mode();
@@ -100,6 +100,7 @@ pub fn on_activate(app: &Application, config: &Config) {
         jsc::Context::default(),
         primary.clone(),
         secondaries,
+        dm,
     );
     primary.connect_user_message_received(move |webview, message| {
         primary_user_message_received(webview, message, &dispatcher)

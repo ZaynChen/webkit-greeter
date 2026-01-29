@@ -29,7 +29,8 @@ lazy_static = "1.5.0"
 glib-build-tools = "0.21.0"
 
 [features]
-default = ["greetd"]
+default = ["all"]
+all = ["greetd", "lightdm"]
 greetd = ["greeters/greetd"]
 lightdm = ["greeters/lightdm", "x11"]
 x11 = ["dep:gdkx"]

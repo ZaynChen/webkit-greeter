@@ -4,9 +4,7 @@
 
 use serde::Deserialize;
 
-use crate::constants::{
-    CONFIG_PATH, DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR,
-};
+use crate::constants::{DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR};
 
 #[derive(Clone, Default, Debug, Deserialize)]
 pub struct Config {
@@ -24,8 +22,16 @@ pub fn default_themes_dir() -> String {
 }
 
 impl Config {
-    pub fn new(debug: bool, theme: Option<&str>) -> Self {
-        let content = std::fs::read_to_string(*CONFIG_PATH).expect("Can not read config file");
+    pub fn new(debug: bool, theme: Option<&str>, dm: &str) -> Self {
+        let config_path = 
+            [
+                format!("/usr/local/etc/{dm}/webkit-greeter.toml"),
+                format!("/etc/{dm}/webkit-greeter.toml")
+            ].into_iter()
+                .find(|path| std::path::Path::new(path).is_file())
+                .unwrap_or_else(|| panic!("Neither \"/usr/local/etc/{dm}/webkit-greeter.toml\" nor \"/etc/{dm}/webkit-greeter.toml\" exist"));
+
+        let content = std::fs::read_to_string(config_path).expect("Can not read config file");
         let mut config: Config = toml::from_str(&content).expect("config file structure error");
         if debug {
             config.set_debug_mode(true);

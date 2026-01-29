@@ -43,8 +43,9 @@ fn main() -> glib::ExitCode {
     eprintln!("sys-data={:?}", glib::system_data_dirs());
     eprintln!("{:?}", std::env::vars());
 
+    let dm = current_display_manager();
     let args = CliArgs::parse();
-    let config = Config::new(args.debug_mode(), args.theme());
+    let config = Config::new(args.debug_mode(), args.theme(), &dm);
     eprintln!("{config:?}");
 
     if args.list {
@@ -62,7 +63,7 @@ fn main() -> glib::ExitCode {
         .flags(Default::default())
         .build();
 
-    app.connect_activate(move |app| on_activate(app, &config));
+    app.connect_activate(move |app| on_activate(app, &config, &dm));
     app.connect_startup(on_startup);
 
     let exit_code = app.run_with_args::<glib::GString>(&[]);
@@ -74,6 +75,29 @@ fn main() -> glib::ExitCode {
 fn register_resources() {
     gio::resources_register_include!("greeter.gresource").expect("Failed to register resources.");
     greeters::register_api_resource();
+}
+
+// Get current displaymanager managed by systemd.
+fn current_display_manager() -> String {
+    match std::process::Command::new("systemctl")
+        .arg("--property=Id")
+        .arg("show")
+        .arg("display-manager")
+        .output()
+    {
+        Ok(output) => String::from_utf8(output.stdout)
+            .expect("The output of 'systemctl show display-manager' is not encoded as utf8")
+            .trim()
+            .strip_prefix("Id=")
+            .unwrap()
+            .strip_suffix(".service")
+            .unwrap()
+            .to_string(),
+        Err(e) => {
+            logger::error!("Failed to get current display manager by systemd: {e}");
+            "".to_string()
+        }
+    }
 }
 
 use clap::{Parser, ValueEnum};

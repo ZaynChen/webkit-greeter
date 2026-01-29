@@ -2,10 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use jsc::JSCValueExtManual;
 use lightdm::prelude::*;
 use webkit::{
     WebView,
-    glib::{self, Variant, clone, variant::ToVariant},
+    glib::{Variant, clone, variant::ToVariant},
 };
 
 use crate::{
@@ -13,14 +14,14 @@ use crate::{
     jscvalue::ToJSCValue,
 };
 
-pub struct Greeter {
-    context: jsc::Context,
+pub struct LightDMGreeter {
+    pub(super) context: jsc::Context,
     greeter: lightdm::Greeter,
     user_list: Option<lightdm::UserList>,
     shared_data_directory: String,
 }
 
-impl Greeter {
+impl LightDMGreeter {
     pub fn new(context: jsc::Context, webview: &WebView) -> Self {
         let greeter = lightdm::Greeter::new();
         let user_list = lightdm::UserList::instance();
@@ -153,23 +154,23 @@ impl Greeter {
         }
     }
 
-    fn can_hibernate(&self) -> jsc::Value {
+    pub(super) fn can_hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_hibernate())
     }
 
-    fn can_reboot(&self) -> jsc::Value {
+    pub(super) fn can_reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_reboot())
     }
 
-    fn can_shutdown(&self) -> jsc::Value {
+    pub(super) fn can_shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_power_off())
     }
 
-    fn can_suspend(&self) -> jsc::Value {
+    pub(super) fn can_suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
     }
 
-    fn hibernate(&self) -> jsc::Value {
+    pub(super) fn hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::hibernate()
@@ -178,7 +179,7 @@ impl Greeter {
         )
     }
 
-    fn reboot(&self) -> jsc::Value {
+    pub(super) fn reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::reboot()
@@ -187,7 +188,7 @@ impl Greeter {
         )
     }
 
-    fn shutdown(&self) -> jsc::Value {
+    pub(super) fn shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::power_off()
@@ -196,7 +197,7 @@ impl Greeter {
         )
     }
 
-    fn suspend(&self) -> jsc::Value {
+    pub(super) fn suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::suspend()
@@ -205,7 +206,7 @@ impl Greeter {
         )
     }
 
-    fn languages(&self) -> jsc::Value {
+    pub(super) fn languages(&self) -> jsc::Value {
         let context = &self.context;
         let languages: Vec<_> = LanguageManager::languages()
             .iter()
@@ -214,7 +215,7 @@ impl Greeter {
         jsc::Value::new_array_from_garray(context, &languages)
     }
 
-    fn language(&self) -> jsc::Value {
+    pub(super) fn language(&self) -> jsc::Value {
         let context = &self.context;
         match LanguageManager::current() {
             Some(language) => language.to_jscvalue(context),
@@ -225,7 +226,7 @@ impl Greeter {
         }
     }
 
-    fn set_language(&self, language: &str) -> jsc::Value {
+    pub(super) fn set_language(&self, language: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.set_language(language) {
             logger::error!("{}", e.message());
@@ -235,7 +236,7 @@ impl Greeter {
         }
     }
 
-    fn authentication_user(&self) -> jsc::Value {
+    pub(super) fn authentication_user(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(user) = self.greeter.authentication_user() {
             jsc::Value::new_string(context, Some(user.as_str()))
@@ -244,17 +245,17 @@ impl Greeter {
         }
     }
 
-    fn autologin_guest(&self) -> jsc::Value {
+    pub(super) fn autologin_guest(&self) -> jsc::Value {
         let value = self.greeter.is_autologin_guest_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn autologin_timeout(&self) -> jsc::Value {
+    pub(super) fn autologin_timeout(&self) -> jsc::Value {
         let value = self.greeter.autologin_timeout_hint();
         jsc::Value::new_number(&self.context, value as f64)
     }
 
-    fn autologin_user(&self) -> jsc::Value {
+    pub(super) fn autologin_user(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(value) = self.greeter.autologin_user_hint() {
             jsc::Value::new_string(context, Some(value.as_str()))
@@ -263,7 +264,7 @@ impl Greeter {
         }
     }
 
-    fn default_session(&self) -> jsc::Value {
+    pub(super) fn default_session(&self) -> jsc::Value {
         if let Some(session) = self.greeter.default_session_hint() {
             jsc::Value::new_string(&self.context, Some(session.as_str()))
         } else {
@@ -271,17 +272,17 @@ impl Greeter {
         }
     }
 
-    fn has_guest_account(&self) -> jsc::Value {
+    pub(super) fn has_guest_account(&self) -> jsc::Value {
         let value = self.greeter.has_guest_account_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn hide_users_hint(&self) -> jsc::Value {
+    pub(super) fn hide_users_hint(&self) -> jsc::Value {
         let value = self.greeter.hides_users_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn hostname(&self) -> jsc::Value {
+    pub(super) fn hostname(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(value) = lightdm::functions::hostname() {
             jsc::Value::new_string(context, Some(value.as_str()))
@@ -290,17 +291,17 @@ impl Greeter {
         }
     }
 
-    fn in_authentication(&self) -> jsc::Value {
+    pub(super) fn in_authentication(&self) -> jsc::Value {
         let value = self.greeter.is_in_authentication();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn is_authenticated(&self) -> jsc::Value {
+    pub(super) fn is_authenticated(&self) -> jsc::Value {
         let value = self.greeter.is_authenticated();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn layout(&self) -> jsc::Value {
+    pub(super) fn layout(&self) -> jsc::Value {
         let context = &self.context;
         match lightdm::functions::layout() {
             Some(layout) => layout.to_jscvalue(context),
@@ -311,7 +312,7 @@ impl Greeter {
         }
     }
 
-    fn set_layout(&self, value: jsc::Value) -> jsc::Value {
+    pub(super) fn set_layout(&self, value: jsc::Value) -> jsc::Value {
         let context = &self.context;
         if !value.object_has_property("name")
             || !value.object_has_property("description")
@@ -335,7 +336,7 @@ impl Greeter {
         jsc::Value::new_boolean(context, true)
     }
 
-    fn layouts(&self) -> jsc::Value {
+    pub(super) fn layouts(&self) -> jsc::Value {
         let context = &self.context;
         let layouts: Vec<jsc::Value> = lightdm::functions::layouts()
             .iter()
@@ -344,12 +345,12 @@ impl Greeter {
         jsc::Value::new_array_from_garray(context, &layouts)
     }
 
-    fn lock_hint(&self) -> jsc::Value {
+    pub(super) fn lock_hint(&self) -> jsc::Value {
         let value = self.greeter.is_lock_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn remote_sessions(&self) -> jsc::Value {
+    pub(super) fn remote_sessions(&self) -> jsc::Value {
         let context = &self.context;
         let sessions: Vec<jsc::Value> = lightdm::functions::remote_sessions()
             .iter()
@@ -358,12 +359,12 @@ impl Greeter {
         jsc::Value::new_array_from_garray(context, &sessions)
     }
 
-    fn select_guest_hint(&self) -> jsc::Value {
+    pub(super) fn select_guest_hint(&self) -> jsc::Value {
         let value = self.greeter.selects_guest_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn select_user_hint(&self) -> jsc::Value {
+    pub(super) fn select_user_hint(&self) -> jsc::Value {
         let context = &self.context;
         match self.greeter.select_user_hint() {
             Some(value) => jsc::Value::new_string(context, Some(value.as_str())),
@@ -371,7 +372,7 @@ impl Greeter {
         }
     }
 
-    fn sessions(&self) -> jsc::Value {
+    pub(super) fn sessions(&self) -> jsc::Value {
         let context = &self.context;
         let sessions: Vec<_> = SessionManager::sessions()
             .iter()
@@ -380,7 +381,7 @@ impl Greeter {
         jsc::Value::new_array_from_garray(context, &sessions)
     }
 
-    fn shared_data_directory_getter(&self) -> jsc::Value {
+    pub(super) fn shared_data_directory_getter(&self) -> jsc::Value {
         let context = &self.context;
         let dir = &self.shared_data_directory;
         if dir.is_empty() {
@@ -390,17 +391,17 @@ impl Greeter {
         }
     }
 
-    fn show_manual_login_hint(&self) -> jsc::Value {
+    pub(super) fn show_manual_login_hint(&self) -> jsc::Value {
         let value = self.greeter.shows_manual_login_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn show_remote_login_hint(&self) -> jsc::Value {
+    pub(super) fn show_remote_login_hint(&self) -> jsc::Value {
         let value = self.greeter.shows_remote_login_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    fn users(&self) -> jsc::Value {
+    pub(super) fn users(&self) -> jsc::Value {
         let context = &self.context;
         let users = match &self.user_list {
             Some(userlist) => userlist
@@ -413,7 +414,7 @@ impl Greeter {
         jsc::Value::new_array_from_garray(context, &users)
     }
 
-    fn authenticate(&self, username: Option<&str>) -> jsc::Value {
+    pub(super) fn authenticate(&self, username: Option<&str>) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.authenticate(username) {
             logger::error!("{}", e.message());
@@ -423,7 +424,7 @@ impl Greeter {
         }
     }
 
-    fn authenticate_as_guest(&self) -> jsc::Value {
+    pub(super) fn authenticate_as_guest(&self) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.authenticate_as_guest() {
             logger::error!("{}", e.message());
@@ -433,7 +434,7 @@ impl Greeter {
         }
     }
 
-    fn cancel_authentication(&self) -> jsc::Value {
+    pub(super) fn cancel_authentication(&self) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.cancel_authentication() {
             logger::error!("{}", e.message());
@@ -443,12 +444,12 @@ impl Greeter {
         }
     }
 
-    fn cancel_autologin(&self) -> jsc::Value {
+    pub(super) fn cancel_autologin(&self) -> jsc::Value {
         self.greeter.cancel_autologin();
         jsc::Value::new_boolean(&self.context, true)
     }
 
-    fn respond(&self, response: &str) -> jsc::Value {
+    pub(super) fn respond(&self, response: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.respond(response) {
             logger::error!("{}", e.message());
@@ -458,7 +459,7 @@ impl Greeter {
         }
     }
 
-    fn start_session(&self, session: &str) -> jsc::Value {
+    pub(super) fn start_session(&self, session: &str) -> jsc::Value {
         let context = &self.context;
         logger::info!("{session}");
         if let Err(e) = self.greeter.start_session_sync(Some(session)) {
@@ -531,8 +532,6 @@ mod signals {
         webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 }
-
-use jsc::JSCValueExtManual;
 
 impl ToJSCValue for lightdm::User {
     fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value {
