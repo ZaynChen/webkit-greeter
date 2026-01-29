@@ -6,7 +6,7 @@ edition.workspace = true
 description = "WebKit Greeter"
 repository.workspace = true
 license = "GPL-3.0-or-later"
-keywords = ["webkit", "greeter"]
+keywords = ["webkit", "greeter", "greetd", "lightdm"]
 categories = ["GUI"]
 build = "build.rs"
 
@@ -19,7 +19,6 @@ gtk.workspace = true
 webkit.workspace = true
 jsc.workspace = true
 greeters.workspace = true
-
 gdkx = { package = "gdk4-x11", version = "0.10", features = [
   "xlib",
 ], optional = true }

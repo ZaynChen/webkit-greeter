@@ -6,7 +6,7 @@ edition.workspace = true
 description = "greeters for WebKit Greeter"
 repository.workspace = true
 license = "GPL-3.0-or-later AND LGPL-3.0-or-later"
-keywords = ["webkit", "greeter"]
+keywords = ["webkit", "greeter", "greetd", "lightdm"]
 categories = ["GUI"]
 build = "build.rs"
 
