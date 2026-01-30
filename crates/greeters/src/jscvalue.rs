@@ -4,7 +4,7 @@
 
 use jsc::JSCValueExtManual;
 
-use crate::common::{Language, Session, SessionManager, User};
+use crate::common::{Language, Layout, Session, SessionManager, User};
 
 #[allow(dead_code)]
 pub trait ToJSCValue {
@@ -25,6 +25,17 @@ impl ToJSCValue for Language {
             "territory",
             &jsc::Value::new_string(context, Some(territory)),
         );
+
+        value
+    }
+}
+
+impl ToJSCValue for Layout {
+    fn to_jscvalue(&self, context: &jsc::Context) -> jsc::Value {
+        let value = jsc::Value::new_object(context, None, None);
+
+        let name = self.name();
+        value.object_set_property("name", &jsc::Value::new_string(context, Some(name)));
 
         value
     }

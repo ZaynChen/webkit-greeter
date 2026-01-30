@@ -154,23 +154,23 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn can_hibernate(&self) -> jsc::Value {
+    fn can_hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_hibernate())
     }
 
-    pub(super) fn can_reboot(&self) -> jsc::Value {
+    fn can_reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_reboot())
     }
 
-    pub(super) fn can_shutdown(&self) -> jsc::Value {
+    fn can_shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_power_off())
     }
 
-    pub(super) fn can_suspend(&self) -> jsc::Value {
+    fn can_suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
     }
 
-    pub(super) fn hibernate(&self) -> jsc::Value {
+    fn hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::hibernate()
@@ -179,7 +179,7 @@ impl LightDMGreeter {
         )
     }
 
-    pub(super) fn reboot(&self) -> jsc::Value {
+    fn reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::reboot()
@@ -188,7 +188,7 @@ impl LightDMGreeter {
         )
     }
 
-    pub(super) fn shutdown(&self) -> jsc::Value {
+    fn shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::power_off()
@@ -197,7 +197,7 @@ impl LightDMGreeter {
         )
     }
 
-    pub(super) fn suspend(&self) -> jsc::Value {
+    fn suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::suspend()
@@ -206,7 +206,7 @@ impl LightDMGreeter {
         )
     }
 
-    pub(super) fn languages(&self) -> jsc::Value {
+    fn languages(&self) -> jsc::Value {
         let context = &self.context;
         let languages: Vec<_> = LanguageManager::languages()
             .iter()
@@ -215,7 +215,7 @@ impl LightDMGreeter {
         jsc::Value::new_array_from_garray(context, &languages)
     }
 
-    pub(super) fn language(&self) -> jsc::Value {
+    fn language(&self) -> jsc::Value {
         let context = &self.context;
         match LanguageManager::current() {
             Some(language) => language.to_jscvalue(context),
@@ -226,7 +226,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn set_language(&self, language: &str) -> jsc::Value {
+    fn set_language(&self, language: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.set_language(language) {
             logger::error!("{}", e.message());
@@ -236,7 +236,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn authentication_user(&self) -> jsc::Value {
+    fn authentication_user(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(user) = self.greeter.authentication_user() {
             jsc::Value::new_string(context, Some(user.as_str()))
@@ -245,17 +245,17 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn autologin_guest(&self) -> jsc::Value {
+    fn autologin_guest(&self) -> jsc::Value {
         let value = self.greeter.is_autologin_guest_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn autologin_timeout(&self) -> jsc::Value {
+    fn autologin_timeout(&self) -> jsc::Value {
         let value = self.greeter.autologin_timeout_hint();
         jsc::Value::new_number(&self.context, value as f64)
     }
 
-    pub(super) fn autologin_user(&self) -> jsc::Value {
+    fn autologin_user(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(value) = self.greeter.autologin_user_hint() {
             jsc::Value::new_string(context, Some(value.as_str()))
@@ -264,7 +264,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn default_session(&self) -> jsc::Value {
+    fn default_session(&self) -> jsc::Value {
         if let Some(session) = self.greeter.default_session_hint() {
             jsc::Value::new_string(&self.context, Some(session.as_str()))
         } else {
@@ -272,17 +272,17 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn has_guest_account(&self) -> jsc::Value {
+    fn has_guest_account(&self) -> jsc::Value {
         let value = self.greeter.has_guest_account_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn hide_users_hint(&self) -> jsc::Value {
+    fn hide_users_hint(&self) -> jsc::Value {
         let value = self.greeter.hides_users_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn hostname(&self) -> jsc::Value {
+    fn hostname(&self) -> jsc::Value {
         let context = &self.context;
         if let Some(value) = lightdm::functions::hostname() {
             jsc::Value::new_string(context, Some(value.as_str()))
@@ -291,17 +291,17 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn in_authentication(&self) -> jsc::Value {
+    fn in_authentication(&self) -> jsc::Value {
         let value = self.greeter.is_in_authentication();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn is_authenticated(&self) -> jsc::Value {
+    fn is_authenticated(&self) -> jsc::Value {
         let value = self.greeter.is_authenticated();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn layout(&self) -> jsc::Value {
+    fn layout(&self) -> jsc::Value {
         let context = &self.context;
         match lightdm::functions::layout() {
             Some(layout) => layout.to_jscvalue(context),
@@ -312,7 +312,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn set_layout(&self, value: jsc::Value) -> jsc::Value {
+    fn set_layout(&self, value: jsc::Value) -> jsc::Value {
         let context = &self.context;
         if !value.object_has_property("name")
             || !value.object_has_property("description")
@@ -336,7 +336,7 @@ impl LightDMGreeter {
         jsc::Value::new_boolean(context, true)
     }
 
-    pub(super) fn layouts(&self) -> jsc::Value {
+    fn layouts(&self) -> jsc::Value {
         let context = &self.context;
         let layouts: Vec<jsc::Value> = lightdm::functions::layouts()
             .iter()
@@ -345,12 +345,12 @@ impl LightDMGreeter {
         jsc::Value::new_array_from_garray(context, &layouts)
     }
 
-    pub(super) fn lock_hint(&self) -> jsc::Value {
+    fn lock_hint(&self) -> jsc::Value {
         let value = self.greeter.is_lock_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn remote_sessions(&self) -> jsc::Value {
+    fn remote_sessions(&self) -> jsc::Value {
         let context = &self.context;
         let sessions: Vec<jsc::Value> = lightdm::functions::remote_sessions()
             .iter()
@@ -359,12 +359,12 @@ impl LightDMGreeter {
         jsc::Value::new_array_from_garray(context, &sessions)
     }
 
-    pub(super) fn select_guest_hint(&self) -> jsc::Value {
+    fn select_guest_hint(&self) -> jsc::Value {
         let value = self.greeter.selects_guest_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn select_user_hint(&self) -> jsc::Value {
+    fn select_user_hint(&self) -> jsc::Value {
         let context = &self.context;
         match self.greeter.select_user_hint() {
             Some(value) => jsc::Value::new_string(context, Some(value.as_str())),
@@ -372,7 +372,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn sessions(&self) -> jsc::Value {
+    fn sessions(&self) -> jsc::Value {
         let context = &self.context;
         let sessions: Vec<_> = SessionManager::sessions()
             .iter()
@@ -381,7 +381,7 @@ impl LightDMGreeter {
         jsc::Value::new_array_from_garray(context, &sessions)
     }
 
-    pub(super) fn shared_data_directory_getter(&self) -> jsc::Value {
+    fn shared_data_directory_getter(&self) -> jsc::Value {
         let context = &self.context;
         let dir = &self.shared_data_directory;
         if dir.is_empty() {
@@ -391,17 +391,17 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn show_manual_login_hint(&self) -> jsc::Value {
+    fn show_manual_login_hint(&self) -> jsc::Value {
         let value = self.greeter.shows_manual_login_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn show_remote_login_hint(&self) -> jsc::Value {
+    fn show_remote_login_hint(&self) -> jsc::Value {
         let value = self.greeter.shows_remote_login_hint();
         jsc::Value::new_boolean(&self.context, value)
     }
 
-    pub(super) fn users(&self) -> jsc::Value {
+    fn users(&self) -> jsc::Value {
         let context = &self.context;
         let users = match &self.user_list {
             Some(userlist) => userlist
@@ -414,7 +414,7 @@ impl LightDMGreeter {
         jsc::Value::new_array_from_garray(context, &users)
     }
 
-    pub(super) fn authenticate(&self, username: Option<&str>) -> jsc::Value {
+    fn authenticate(&self, username: Option<&str>) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.authenticate(username) {
             logger::error!("{}", e.message());
@@ -424,7 +424,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn authenticate_as_guest(&self) -> jsc::Value {
+    fn authenticate_as_guest(&self) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.authenticate_as_guest() {
             logger::error!("{}", e.message());
@@ -434,7 +434,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn cancel_authentication(&self) -> jsc::Value {
+    fn cancel_authentication(&self) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.cancel_authentication() {
             logger::error!("{}", e.message());
@@ -444,12 +444,12 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn cancel_autologin(&self) -> jsc::Value {
+    fn cancel_autologin(&self) -> jsc::Value {
         self.greeter.cancel_autologin();
         jsc::Value::new_boolean(&self.context, true)
     }
 
-    pub(super) fn respond(&self, response: &str) -> jsc::Value {
+    fn respond(&self, response: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.respond(response) {
             logger::error!("{}", e.message());
@@ -459,7 +459,7 @@ impl LightDMGreeter {
         }
     }
 
-    pub(super) fn start_session(&self, session: &str) -> jsc::Value {
+    fn start_session(&self, session: &str) -> jsc::Value {
         let context = &self.context;
         if let Err(e) = self.greeter.start_session_sync(Some(session)) {
             logger::error!("{}", e.message());

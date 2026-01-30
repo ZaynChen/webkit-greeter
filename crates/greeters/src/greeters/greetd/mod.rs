@@ -15,7 +15,7 @@ use webkit::{
 use std::cell::RefCell;
 
 use crate::{
-    common::{LanguageManager, PowerManager, SessionManager, UserManager},
+    common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager},
     jscvalue::ToJSCValue,
 };
 
@@ -55,6 +55,8 @@ impl GreetdGreeter {
                 "suspend" => self.suspend(),
                 "language" => self.language(),
                 "languages" => self.languages(),
+                "layout" => self.layout(),
+                "layouts" => self.layouts(),
                 "sessions" => self.sessions(),
                 "users" => self.users(),
                 "authentication_user" => self.authentication_user(),
@@ -68,6 +70,7 @@ impl GreetdGreeter {
             }
         } else {
             match name {
+                "layout" => self.set_layout(&params[0].to_string()),
                 "set_language" => self.set_language(&params[0].to_string()),
                 "authenticate" => self.authenticate(params[0].to_string()),
                 "respond" => self.respond(params[0].to_string()),
@@ -86,23 +89,23 @@ impl GreetdGreeter {
         }
     }
 
-    pub(super) fn can_hibernate(&self) -> jsc::Value {
+    fn can_hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_hibernate())
     }
 
-    pub(super) fn can_reboot(&self) -> jsc::Value {
+    fn can_reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_reboot())
     }
 
-    pub(super) fn can_shutdown(&self) -> jsc::Value {
+    fn can_shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_power_off())
     }
 
-    pub(super) fn can_suspend(&self) -> jsc::Value {
+    fn can_suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
     }
 
-    pub(super) fn hibernate(&self) -> jsc::Value {
+    fn hibernate(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::hibernate()
@@ -111,7 +114,7 @@ impl GreetdGreeter {
         )
     }
 
-    pub(super) fn reboot(&self) -> jsc::Value {
+    fn reboot(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::reboot()
@@ -120,7 +123,7 @@ impl GreetdGreeter {
         )
     }
 
-    pub(super) fn shutdown(&self) -> jsc::Value {
+    fn shutdown(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::power_off()
@@ -129,7 +132,7 @@ impl GreetdGreeter {
         )
     }
 
-    pub(super) fn suspend(&self) -> jsc::Value {
+    fn suspend(&self) -> jsc::Value {
         jsc::Value::new_boolean(
             &self.context,
             PowerManager::suspend()
@@ -138,19 +141,19 @@ impl GreetdGreeter {
         )
     }
 
-    pub(super) fn authentication_user(&self) -> jsc::Value {
+    fn authentication_user(&self) -> jsc::Value {
         jsc::Value::new_string(&self.context, self.greeter.borrow().authentication_user())
     }
 
-    pub(super) fn in_authentication(&self) -> jsc::Value {
+    fn in_authentication(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, self.greeter.borrow().in_authentication())
     }
 
-    pub(super) fn is_authenticated(&self) -> jsc::Value {
+    fn is_authenticated(&self) -> jsc::Value {
         jsc::Value::new_boolean(&self.context, self.greeter.borrow().is_authenticated())
     }
 
-    pub(super) fn language(&self) -> jsc::Value {
+    fn language(&self) -> jsc::Value {
         let context = &self.context;
         match LanguageManager::current() {
             Some(language) => language.to_jscvalue(context),
@@ -161,7 +164,7 @@ impl GreetdGreeter {
         }
     }
 
-    pub(super) fn set_language(&self, language: &str) -> jsc::Value {
+    fn set_language(&self, language: &str) -> jsc::Value {
         let context = &self.context;
         if let Some(user) = self.greeter.borrow().authentication_user() {
             if let Err(e) = UserManager::set_language(user, language) {
@@ -176,7 +179,7 @@ impl GreetdGreeter {
         }
     }
 
-    pub(super) fn languages(&self) -> jsc::Value {
+    fn languages(&self) -> jsc::Value {
         let context = &self.context;
         let languages: Vec<_> = LanguageManager::languages()
             .iter()
@@ -185,7 +188,27 @@ impl GreetdGreeter {
         jsc::Value::new_array_from_garray(context, &languages)
     }
 
-    pub(super) fn sessions(&self) -> jsc::Value {
+    fn layout(&self) -> jsc::Value {
+        LayoutManager::instance()
+            .layout()
+            .to_jscvalue(&self.context)
+    }
+
+    fn set_layout(&self, layout: &str) -> jsc::Value {
+        jsc::Value::new_boolean(&self.context, LayoutManager::instance().set_layout(layout))
+    }
+
+    fn layouts(&self) -> jsc::Value {
+        let context = &self.context;
+        let layouts: Vec<_> = LayoutManager::instance()
+            .layouts()
+            .iter()
+            .map(|l| l.to_jscvalue(context))
+            .collect();
+        jsc::Value::new_array_from_garray(&self.context, &layouts)
+    }
+
+    fn sessions(&self) -> jsc::Value {
         let context = &self.context;
         let sessions: Vec<_> = SessionManager::sessions()
             .iter()
@@ -194,7 +217,7 @@ impl GreetdGreeter {
         jsc::Value::new_array_from_garray(context, &sessions)
     }
 
-    pub(super) fn users(&self) -> jsc::Value {
+    fn users(&self) -> jsc::Value {
         let context = &self.context;
         let users: Vec<_> = UserManager::instance()
             .list_users()
@@ -204,7 +227,7 @@ impl GreetdGreeter {
         jsc::Value::new_array_from_garray(context, &users)
     }
 
-    pub(super) fn authenticate(&self, username: String) -> jsc::Value {
+    fn authenticate(&self, username: String) -> jsc::Value {
         let context = &self.context;
         match self.greeter.borrow_mut().create_session(username) {
             Ok(Response::Success) | Ok(Response::AuthMessage { .. }) => {
@@ -216,7 +239,7 @@ impl GreetdGreeter {
         jsc::Value::new_boolean(context, false)
     }
 
-    pub(super) fn cancel_authentication(&self) -> jsc::Value {
+    fn cancel_authentication(&self) -> jsc::Value {
         let context = &self.context;
         match self.greeter.borrow_mut().cancel_session() {
             Ok(Response::Success) => {
@@ -229,7 +252,7 @@ impl GreetdGreeter {
         jsc::Value::new_boolean(context, false)
     }
 
-    pub(super) fn respond(&self, response: String) -> jsc::Value {
+    fn respond(&self, response: String) -> jsc::Value {
         let context = &self.context;
         match self.greeter.borrow_mut().post_response(Some(response)) {
             Ok(Response::Success) => {
@@ -243,7 +266,7 @@ impl GreetdGreeter {
         jsc::Value::new_boolean(context, false)
     }
 
-    pub(super) fn start_session(&self, session_key: String) -> jsc::Value {
+    fn start_session(&self, session_key: String) -> jsc::Value {
         let session = SessionManager::session(&session_key);
         if session.is_none() {
             logger::error!("{session_key} does not exist");

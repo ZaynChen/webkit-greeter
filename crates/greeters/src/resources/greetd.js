@@ -95,10 +95,9 @@ class Greeter {
   #send_request(method, args) {
     return send_request("greeter", method, args);
   }
-  // get authentication_user() {
-  //   // return this.#send_request("authentication_user");
-  //   return null;
-  // }
+  get authentication_user() {
+    return this.#send_request("authentication_user");
+  }
   get can_hibernate() {
     return this.#send_request("can_hibernate");
   }
@@ -111,12 +110,6 @@ class Greeter {
   get can_suspend() {
     return this.#send_request("can_suspend");
   }
-  get default_session() {
-    return this.#send_request("default_session");
-  }
-  // get has_guest_account() {
-  //   return this.#send_request("has_guest_account");
-  // }
   get in_authentication() {
     return this.#send_request("in_authentication");
   }
@@ -130,34 +123,15 @@ class Greeter {
     return this.#send_request("languages").map((l) => new Language(l));
   }
   get layout() {
-    // TODO:  current layout
-    //
-    // return new Layout(this.#send_request("layout"));
-    return new Layout({
-      description: "英语（美国）",
-      name: "us",
-      short_description: "en",
-    });
+    return new Layout(this.#send_request("layout"));
   }
   set layout(value) {
-    this.#send_request("layout", [value]);
+    let val = "string" === typeof value ? value : value.name;
+    this.#send_request("layout", [val]);
   }
   get layouts() {
-    // TODO:  current layout
-    //
-    // return this.#send_request("layouts").map((l) => new Layout(l));
-    return [
-      new Layout({
-        description: "英语（美国）",
-        name: "us",
-        short_description: "en",
-      }),
-    ];
+    return this.#send_request("layouts").map((l) => new Layout(l));
   }
-  // get lock_hint() {
-  //   // return this.#send_request("lock_hint");
-  //   return false;
-  // }
   get sessions() {
     return this.#send_request("sessions").map((s) => new Session(s));
   }
@@ -176,9 +150,6 @@ class Greeter {
   suspend() {
     return this.#send_request("suspend");
   }
-  // authenticate_as_guest() {
-  //   return this.#send_request("authenticate_as_guest");
-  // }
   authenticate(username = null) {
     return this.#send_request("authenticate", [username]);
   }
@@ -222,7 +193,7 @@ class GreeterConfig {
     return this.#send_request("greeter");
   }
   get layouts() {
-    return [];
+    return send_request("greeter", "layouts").map((l) => new Layout(l));
   }
 }
 

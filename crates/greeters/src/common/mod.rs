@@ -5,10 +5,12 @@
 mod accounts;
 mod dbus;
 mod language;
+mod layout;
 mod power;
 mod session;
 
 pub use accounts::{User, UserManager};
 pub use language::{Language, LanguageManager};
+pub use layout::{Layout, LayoutManager};
 pub use power::PowerManager;
 pub use session::{Session, SessionManager};
