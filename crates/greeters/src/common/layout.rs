@@ -62,7 +62,7 @@ impl LayoutManager {
 }
 
 fn keyboard_layouts() -> (usize, Vec<Layout>) {
-    match std::env::var("XDG_SESSION_DESKTOP").as_deref() {
+    match std::env::var("XDG_CURRENT_DESKTOP").as_deref() {
         #[cfg(feature = "hyprland")]
         Ok("Hyprland") => hyprland_kb_layouts(),
         Ok(s) => {
@@ -70,7 +70,7 @@ fn keyboard_layouts() -> (usize, Vec<Layout>) {
             (0, Vec::new())
         }
         Err(e) => {
-            logger::error!("Could not get $XDG_SESSION_DESKTOP environment variable: {e}");
+            logger::error!("Could not get $XDG_CURRENT_DESKTOP environment variable: {e}");
             (0, Vec::new())
         }
     }
@@ -78,7 +78,7 @@ fn keyboard_layouts() -> (usize, Vec<Layout>) {
 
 fn switch_xkb_layout(idx: usize, layouts: &[Layout]) -> bool {
     let layout_name = &layouts[idx].name;
-    match std::env::var("XDG_SESSION_DESKTOP").as_deref() {
+    match std::env::var("XDG_CURRENT_DESKTOP").as_deref() {
         #[cfg(feature = "hyprland")]
         Ok("Hyprland") => hyprland_switch_xkb_layout(idx as u8)
             .inspect_err(|e| logger::error!("Failed to set keyboard layout to {layout_name}: {e}"))
@@ -88,7 +88,7 @@ fn switch_xkb_layout(idx: usize, layouts: &[Layout]) -> bool {
             false
         }
         Err(e) => {
-            logger::error!("Could not get $XDG_SESSION_DESKTOP environment variable: {e}");
+            logger::error!("Could not get $XDG_CURRENT_DESKTOP environment variable: {e}");
             false
         }
     }
