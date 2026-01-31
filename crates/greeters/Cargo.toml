@@ -20,13 +20,18 @@ lightdm = { git = "https://github.com/ZaynChen/lightdm-rs.git", version = "0.1.0
 logger.workspace = true
 pwd = "1.4.0"
 serde = "1.0.228"
+swayipc = { version = "4.0.0", optional = true }
 webkit.workspace = true
+xkb-data = { version = "0.2.2", optional = true }
 zbus = "5.12.0"
 
 [build-dependencies]
 glib-build-tools = "0.21.0"
 
 [features]
-greetd = ["hyprland"]
+greetd = ["wayland"]
 hyprland = ["dep:hyprland"]
 lightdm = ["dep:lightdm"]
+sway = ["dep:swayipc"]
+wayland = ["hyprland", "sway", "xkb"]
+xkb = ["dep:xkb-data"]

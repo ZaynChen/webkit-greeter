@@ -35,7 +35,18 @@ impl ToJSCValue for Layout {
         let value = jsc::Value::new_object(context, None, None);
 
         let name = self.name();
+        let description = self.description();
+        let short_description = self.short_description();
+
         value.object_set_property("name", &jsc::Value::new_string(context, Some(name)));
+        value.object_set_property(
+            "description",
+            &jsc::Value::new_string(context, Some(description)),
+        );
+        value.object_set_property(
+            "short_description",
+            &jsc::Value::new_string(context, short_description),
+        );
 
         value
     }
