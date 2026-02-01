@@ -11,10 +11,12 @@ if [ -d /usr/local/lib/$_pkgname ]; then
   sudo rm /usr/share/xgreeters/$_pkgname.desktop
 fi
 
-sudo rm "/usr/bin/$_pkgname"
-sudo rm -r "/usr/lib/$_pkgname"
-sudo rm -r "/etc/$_pkgname"
-sudo rm -r "/usr/share/doc/$_pkgname"
-sudo rm -r "/usr/share/licenses/$_pkgname"
-sudo rm "/usr/lib/sysusers.d/$_pkgname.conf"
-sudo rm "/usr/lib/tmpfiles.d/$_pkgname.conf"
+if [ -d /usr/lib/$_pkgname ]; then
+  sudo rm "/usr/bin/$_pkgname"
+  sudo rm -r "/usr/lib/$_pkgname"
+  sudo rm -r "/etc/$_pkgname"
+  sudo rm -r "/usr/share/doc/$_pkgname"
+  sudo rm "/usr/lib/sysusers.d/$_pkgname.conf"
+  sudo rm "/usr/lib/tmpfiles.d/$_pkgname.conf"
+  sudo rm -r /usr/share/webkit-greeter/themes/litarvan
+fi

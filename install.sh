@@ -51,18 +51,6 @@ package() {
   sudo install -Dm0644 examples/* -t "/usr/share/doc/$_pkgname/examples"
   sudo install -Dm0644 LICENSE -t "/usr/share/licenses/$_pkgname"
 
-  if [ $dm = greetd ] || [ $dm = all ] ; then
-    _exampledir="/usr/share/doc/$_pkgname/examples"
-    sudo cp "$_exampledir/greetd.conf" "/etc/greetd/greetd.conf"
-    sudo cp "$_exampledir/greetd.pam" "/etc/pam.d/greetd"
-    sudo cp "$_exampledir/hyprland.conf" "/etc/webkit-greeter/hyprland.conf"
-    sudo cp "$_exampledir/sway.conf" "/etc/webkit-greeter/sway.conf"
-  fi
-
-  if [ $dm = lightdm ] || [ $dm = all ] ; then
-    sudo cp "$_pkgdocdir/$_pkgname.desktop" "/usr/share/xgreeters/$_pkgname.desktop"
-  fi
-
   CURR_DIR=$(pwd)
   cd themes/lightdm-webkit-theme-litarvan
   _themepkg="lightdm-webkit-theme-litarvan-$(cat version).tar.gz"
@@ -76,3 +64,15 @@ package() {
 build
 
 package
+
+if [ $dm = greetd ] || [ $dm = all ] ; then
+  _exampledir="/usr/share/doc/$_pkgname/examples"
+  sudo cp "$_exampledir/greetd.conf" "/etc/greetd/greetd.conf"
+  sudo cp "$_exampledir/greetd.pam" "/etc/pam.d/greetd"
+  sudo cp "$_exampledir/hyprland.conf" "/etc/webkit-greeter/hyprland.conf"
+  sudo cp "$_exampledir/sway.conf" "/etc/webkit-greeter/sway.conf"
+fi
+
+if [ $dm = lightdm ] || [ $dm = all ] ; then
+  sudo cp "/usr/share/doc/$_pkgname/examples/$_pkgname.desktop" "/usr/share/xgreeters/$_pkgname.desktop"
+fi
