@@ -10,7 +10,7 @@ categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
-gettext-rs = "0.7.7"
+gettext-rs = { version = "0.7.7", features = ["gettext-system"] }
 greetd_ipc = { version = "0.10", features = ["sync-codec"] }
 hyprland = { git = "https://github.com/hyprland-community/hyprland-rs", branch = "master", optional = true }
 jsc.workspace = true
