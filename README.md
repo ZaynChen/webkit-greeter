@@ -90,7 +90,7 @@ user = "webkit-greeter"
 
 Create a Hyprland config file (in a path such as `/etc/webkit-greeter/hyprland.conf`) as follows (full example in [hyprland.conf](./examples/hyprland.conf)):
 
-```ini
+```sh
 $log=/var/log/webkit-greeter/greeter.log
 $old=/var/log/webkit-greeter/greeter.old.log
 exec-once = mv $log $old; webkit-greeter 2>$log; hyprctl dispatch exit
