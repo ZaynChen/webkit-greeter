@@ -49,13 +49,11 @@ package() {
   sudo systemd-sysusers "/usr/lib/sysusers.d/$_pkgname.conf"
 
   sudo install -Dm0644 examples/* -t "/usr/share/doc/$_pkgname/examples"
-  sudo install -Dm0644 LICENSE -t "/usr/share/licenses/$_pkgname"
 
   CURR_DIR=$(pwd)
   cd themes/lightdm-webkit-theme-litarvan
   _themepkg="lightdm-webkit-theme-litarvan-$(cat version).tar.gz"
   sudo install -Dm0755 $_themepkg -t "/usr/share/$_pkgname/themes/litarvan/"
-  sudo install -Dm0644 LICENSE -t "/usr/share/licenses/lightdm-webkit-theme-litarvan/"
   cd /usr/share/$_pkgname/themes/litarvan/
   sudo tar -xvf $_themepkg
   cd $CURR_DIR
