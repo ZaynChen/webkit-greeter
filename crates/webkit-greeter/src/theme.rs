@@ -27,7 +27,7 @@ fn list_themes(themes_dir: &str) -> Vec<String> {
             .map(|ent| ent.file_name().to_string_lossy().to_string())
             .collect(),
         Err(_) => {
-            println!("Threre are no themes located at {themes_dir}");
+            println!("There are no themes located at {themes_dir}");
             vec![]
         }
     };
@@ -43,7 +43,7 @@ pub fn load_theme_html(themes_dir: &str, theme: &str) -> (String, String) {
     let primary_html = if primary_path.is_file() && primary.ends_with(".html") {
         primary_path.to_string_lossy().to_string()
     } else {
-        PathBuf::from(DEFAULT_THEME_DIR.clone())
+        PathBuf::from(DEFAULT_THEME_DIR)
             .join(DEFAULT_THEME)
             .join("index.html")
             .to_string_lossy()

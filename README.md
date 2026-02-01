@@ -18,9 +18,9 @@ I use it as my main greeter for greetd with hyprland as compositor.
 - [x] Detect theme errors prompt
 - [x] Add themes
 - [x] Add config
-- [x] Greetd support. See [greetd.conf](./data/greetd.conf)
-  - [x] Hyprland. See [hyprland.conf](./data/hyprland.conf).
-  - [x] Sway. See [sway.conf](./data/sway.conf).
+- [x] Greetd support. See [greetd.conf](./examples/greetd.conf)
+  - [x] Hyprland. See [hyprland.conf](./examples/hyprland.conf).
+  - [x] Sway. See [sway.conf](./examples/sway.conf).
 - [x] Lightdm support
 - [ ] Brightness feature support
 - [ ] Battery feature support

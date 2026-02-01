@@ -4,7 +4,9 @@
 
 use serde::Deserialize;
 
-use crate::constants::{DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR};
+use crate::constants::{
+    CONFIG_PATH, DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR,
+};
 
 #[derive(Clone, Default, Debug, Deserialize)]
 pub struct Config {
@@ -13,26 +15,18 @@ pub struct Config {
     #[serde(default = "default_themes_dir")]
     themes_dir: String,
     primary_monitor: Option<String>,
-    // #[serde(default = "Vec::new")]
-    // layouts: Vec<String>,
 }
 
 pub fn default_themes_dir() -> String {
-    DEFAULT_THEME_DIR.clone()
+    DEFAULT_THEME_DIR.to_string()
 }
 
 impl Config {
-    pub fn new(debug: bool, theme: Option<&str>, dm: &str) -> Self {
-        let config_path = 
-            [
-                format!("/usr/local/etc/{dm}/webkit-greeter.toml"),
-                format!("/etc/{dm}/webkit-greeter.toml")
-            ].into_iter()
-                .find(|path| std::path::Path::new(path).is_file())
-                .unwrap_or_else(|| panic!("Neither \"/usr/local/etc/{dm}/webkit-greeter.toml\" nor \"/etc/{dm}/webkit-greeter.toml\" exist"));
-
-        let content = std::fs::read_to_string(config_path).expect("Can not read config file");
-        let mut config: Config = toml::from_str(&content).expect("config file structure error");
+    pub fn new(debug: bool, theme: Option<&str>) -> Self {
+        let mut config: Config = match std::fs::read_to_string(CONFIG_PATH) {
+            Ok(content) => toml::from_str(&content).expect("config file structure error"),
+            Err(e) => panic!("Can not read config file: {e}"),
+        };
         if debug {
             config.set_debug_mode(true);
         }
@@ -91,10 +85,6 @@ impl Config {
     pub fn primary_monitor(&self) -> Option<&str> {
         self.primary_monitor.as_deref()
     }
-
-    // pub fn layouts(&self) -> &[String] {
-    //     self.layouts.as_slice()
-    // }
 
     fn set_debug_mode(&mut self, debug_mode: bool) {
         self.greeter.debug_mode |= debug_mode;

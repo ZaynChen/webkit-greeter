@@ -37,7 +37,7 @@ fn main() -> glib::ExitCode {
 
     let dm = current_display_manager();
     let args = CliArgs::parse();
-    let config = Config::new(args.debug_mode(), args.theme(), &dm);
+    let config = Config::new(args.debug_mode(), args.theme());
 
     if args.list {
         print_themes(config.themes_dir());

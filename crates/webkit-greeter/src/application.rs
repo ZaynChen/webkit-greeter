@@ -30,7 +30,7 @@ pub fn on_activate(app: &Application, config: &Config, dm: &str) {
             let data = (secure_mode, detect_theme_error, &api).to_variant();
             logger::debug!("Extension initialized");
 
-            context.set_web_process_extensions_directory(*WEB_EXTENSIONS_DIR);
+            context.set_web_process_extensions_directory(WEB_EXTENSIONS_DIR);
             context.set_web_process_extensions_initialization_user_data(&data);
         });
     }

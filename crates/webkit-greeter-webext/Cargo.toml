@@ -9,6 +9,7 @@ keywords = ["greeter", "web-extension", "webkit"]
 categories = ["GUI"]
 
 [lib]
+name = "webext"
 crate-type = ["cdylib"]
 
 [dependencies]

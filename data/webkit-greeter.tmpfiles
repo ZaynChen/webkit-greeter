@@ -1,4 +1,5 @@
-#Type PATH                Mode User           Group         Age Argument
-d /var/lib/webkit-greeter 0750 webkit-greeter webkit-greeter - -
-d /var/log/webkit-greeter 0755 webkit-greeter webkit-greeter - -
-d /run/webkit-greeter     0755 webkit-greeter webkit-greeter - -
+#Type PATH                         Mode User           Group         Age Argument
+d /var/lib/webkit-greeter          0750 webkit-greeter webkit-greeter - -
+d /var/log/webkit-greeter          0755 webkit-greeter webkit-greeter - -
+d /run/webkit-greeter              0755 webkit-greeter webkit-greeter - -
+d /usr/share/webkit-greeter/themes 0755 root           root           - -

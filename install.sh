@@ -5,6 +5,11 @@ if ( ! command -v systemctl >/dev/null 2>&1 ) ; then
   exit 1
 fi
 
+if ( ! command -v systemctl status accounts-daemon >/dev/null 2>&1 ) ; then
+  echo "accountsservice not installed"
+  exit 1
+fi
+
 echo "1) auto-detect  2) greetd  3) lightdm  4) all"
 read -p "Select the display manager [1]: " opt
 case ${opt:-1} in
@@ -12,9 +17,9 @@ case ${opt:-1} in
     dm=$(systemctl --property=Id show display-manager | cut -d '=' -f 2 | cut -d '.' -f 1) ;;
   2)
     dm="greetd" ;;
-  3) 
+  3)
     dm="lightdm" ;;
-  4) 
+  4)
     dm="all" ;;
   *)
     echo "Sorry, wrong selection $REPLY"
@@ -22,8 +27,10 @@ case ${opt:-1} in
 esac
 echo "Display manager: $dm"
 
+_pkgname="webkit-greeter"
+
 build() {
-  cargo build --release --locked --no-default-features --features webkit-greeter/$dm
+  cargo build --release --locked --no-default-features --features $_pkgname/$dm
 
   CURR_DIR=$(pwd)
   cd themes/lightdm-webkit-theme-litarvan
@@ -32,45 +39,37 @@ build() {
 }
 
 package() {
+  sudo install -Dm0755 "target/release/$_pkgname" "/usr/bin/$_pkgname"
+  sudo install -Dm0755 "target/release/libwebext.so" "/usr/lib/$_pkgname/libwebext.so"
+
+  sudo install -Dm0644 "data/$_pkgname.toml" "/etc/$_pkgname/$_pkgname.toml"
+  sudo install -Dm0644 "data/$_pkgname.sysusers" "/usr/lib/sysusers.d/$_pkgname.conf"
+  sudo install -Dm0644 "data/$_pkgname.tmpfiles" "/usr/lib/tmpfiles.d/$_pkgname.conf"
+  # create sysusers
+  sudo systemd-sysusers "/usr/lib/sysusers.d/$_pkgname.conf"
+
+  sudo install -Dm0644 examples/* -t "/usr/share/doc/$_pkgname/examples"
+  sudo install -Dm0644 LICENSE -t "/usr/share/licenses/$_pkgname"
+
   if [ $dm = greetd ] || [ $dm = all ] ; then
-    if ( ! command -v systemctl status accounts-daemon >/dev/null 2>&1 ) ; then
-      echo "accountsservice not installed"
-      exit 1
-    fi
-
-    sudo install -Dm0644 data/greetd.conf /etc/greetd/greetd.conf
-    sudo install -Dm0644 data/webkit-greeter.toml /usr/local/etc/greetd/webkit-greeter.toml
-
-    sudo install -Dm0644 data/hyprland.conf /usr/local/etc/greetd/hyprland.conf
-    sudo install -Dm0644 data/sway.conf /usr/local/etc/greetd/sway.conf
-
-    sudo install -Dm0644 data/greetd.pam /etc/pam.d/greetd
-    sudo install -Dm0644 data/webkit-greeter.sysusers /usr/local/lib/sysusers.d/webkit-greeter.conf
-    sudo install -Dm0644 data/webkit-greeter.tmpfiles /usr/local/lib/tmpfiles.d/webkit-greeter.conf
-
-    # create sysusers
-    sudo systemd-sysusers /usr/local/lib/sysusers.d/webkit-greeter.conf
+    _exampledir="/usr/share/doc/$_pkgname/examples"
+    sudo cp "$_exampledir/greetd.conf" "/etc/greetd/greetd.conf"
+    sudo cp "$_exampledir/greetd.pam" "/etc/pam.d/greetd"
+    sudo cp "$_exampledir/hyprland.conf" "/etc/webkit-greeter/hyprland.conf"
+    sudo cp "$_exampledir/sway.conf" "/etc/webkit-greeter/sway.conf"
   fi
 
   if [ $dm = lightdm ] || [ $dm = all ] ; then
-    sudo install -Dm0644 data/webkit-greeter.desktop /usr/share/xgreeters/webkit-greeter.desktop
-    sudo install -Dm0644 data/webkit-greeter.toml /etc/lightdm/webkit-greeter.toml
+    sudo cp "$_pkgdocdir/$_pkgname.desktop" "/usr/share/xgreeters/$_pkgname.desktop"
   fi
-
-  sudo install -Dm0755 target/release/libwebkit_greeter_webext.so /usr/local/lib/webkit-greeter/libwebkit-greeter-webext.so
-  sudo install -Dm0755 target/release/webkit-greeter /usr/local/bin/webkit-greeter
-
-  [ -d /usr/local/share/webkit-greeter/themes/ ] || sudo mkdir -p /usr/local/share/webkit-greeter/themes/
 
   CURR_DIR=$(pwd)
   cd themes/lightdm-webkit-theme-litarvan
-  VERSION=$(cat version)
-  sudo rm -r /usr/local/share/webkit-greeter/themes/litarvan/
-  sudo mkdir /usr/local/share/webkit-greeter/themes/litarvan/
-  sudo cp ./lightdm-webkit-theme-litarvan-$VERSION.tar.gz /usr/local/share/webkit-greeter/themes/litarvan/
-
-  cd /usr/local/share/webkit-greeter/themes/litarvan/
-  sudo tar -xvf lightdm-webkit-theme-litarvan-$VERSION.tar.gz
+  _themepkg="lightdm-webkit-theme-litarvan-$(cat version).tar.gz"
+  sudo install -Dm0755 $_themepkg -t "/usr/share/$_pkgname/themes/litarvan/"
+  sudo install -Dm0644 LICENSE -t "/usr/share/licenses/lightdm-webkit-theme-litarvan/"
+  cd /usr/share/$_pkgname/themes/litarvan/
+  sudo tar -xvf $_themepkg
   cd $CURR_DIR
 }
 
