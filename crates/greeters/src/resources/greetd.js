@@ -52,9 +52,7 @@ class User {
   home_directory;
   image;
   language;
-  // layout;
-  // layouts;
-  // logged_in;
+  logged_in;
   session;
   username;
   constructor(user_info) {
