@@ -40,24 +40,34 @@ pub fn load_theme_html(themes_dir: &str, theme: &str) -> (String, String) {
     let (primary, secondary) = load_theme_config(&theme_dir);
 
     let primary_path = theme_dir.join(&primary);
-    let primary_html = if primary_path.is_file() && primary.ends_with(".html") {
-        primary_path.to_string_lossy().to_string()
+    if primary_path.is_file() && primary.ends_with(".html") {
+        let primary_html = primary_path.to_string_lossy().to_string();
+        let secondary_html = secondary
+            .filter(|s| s.ends_with(".html"))
+            .map(|s| theme_dir.join(s))
+            .filter(|path| path.is_file())
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or(primary_html.clone());
+        (primary_html, secondary_html)
     } else {
-        PathBuf::from(DEFAULT_THEME_DIR)
-            .join(DEFAULT_THEME)
-            .join("index.html")
-            .to_string_lossy()
-            .to_string()
-    };
+        let theme_dir = PathBuf::from(DEFAULT_THEME_DIR).join(DEFAULT_THEME);
+        let (primary, secondary) = load_theme_config(&theme_dir);
 
-    let secondary_html = secondary
-        .filter(|s| s.ends_with(".html"))
-        .map(|s| theme_dir.join(s))
-        .filter(|path| path.is_file())
-        .map(|path| path.to_string_lossy().to_string())
-        .unwrap_or(primary_html.clone());
+        let primary_path = theme_dir.join(&primary);
+        let primary_html = if primary_path.is_file() && primary.ends_with(".html") {
+            primary_path.to_string_lossy().to_string()
+        } else {
+            theme_dir.join("index.html").to_string_lossy().to_string()
+        };
 
-    (primary_html, secondary_html)
+        let secondary_html = secondary
+            .filter(|s| s.ends_with(".html"))
+            .map(|s| theme_dir.join(s))
+            .filter(|path| path.is_file())
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or(primary_html.clone());
+        (primary_html, secondary_html)
+    }
 }
 
 fn load_theme_config(theme_dir: &Path) -> (String, Option<String>) {
@@ -85,7 +95,7 @@ fn load_theme_config(theme_dir: &Path) -> (String, Option<String>) {
             }
         }
         Err(e) => {
-            logger::error!("Theme config was not loaded:\n\t{e}");
+            logger::error!("Theme config was not loaded: {e}");
             ("index.html".to_string(), None)
         }
     }
