@@ -112,7 +112,7 @@ webkit-greeter 2>/var/log/webkit-greeter/greeter.log; swaymsg exit"
 include /etc/sway/config.d/*
 ```
 
-Replace `/etc/pam.d/greetd` with [greetd.pam](./examples/greetd.pam), which add `pam_gnome_keyring.so` to pam, so that after login, you don't need to authorize the access to the keyring, and the polkit prompt will not show when you need to access the keyring.
+Replace `/etc/pam.d/greetd` with [greetd.pam](./examples/greetd.pam), which [Unlocking keyring](https://wiki.archlinux.org/title/Greetd#Unlocking_keyring_on_autologin_using_the_cryptsetup_password), so that after login, you don't need to input the passwd to a polkit prompt for unloking keyring when needed.
 
 ### LightDM
 
