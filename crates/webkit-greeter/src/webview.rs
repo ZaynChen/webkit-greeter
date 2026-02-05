@@ -66,6 +66,7 @@ pub fn secondary_user_message_received(webview: &WebView, message: &UserMessage)
         .downcast_ref::<ApplicationWindow>()
         .expect("webview.root is not a ApplicationWindow");
     window.present();
+    logger::debug!("WebKit Greeter started win: {}", window.id());
     true
 }
 
