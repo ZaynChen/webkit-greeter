@@ -8,7 +8,7 @@ const send_request = (target, method, args) => {
     method,
     args,
   };
-  return window.send_request(request);
+  return globalThis.send_request(request);
 };
 
 class Language {
@@ -115,26 +115,28 @@ class Greeter {
     return this.#send_request("is_authenticated");
   }
   get language() {
-    return new Language(this.#send_request("language"));
+    const language = this.#send_request("language");
+    return language && new Language(language);
   }
   get languages() {
-    return this.#send_request("languages").map((l) => new Language(l));
+    return this.#send_request("languages")?.map((l) => new Language(l));
   }
   get layout() {
-    return new Layout(this.#send_request("layout"));
+    const layout = this.#send_request("layout");
+    return layout && new Layout(layout);
   }
   set layout(value) {
     let val = "string" === typeof value ? value : value.name;
     this.#send_request("layout", [val]);
   }
   get layouts() {
-    return this.#send_request("layouts").map((l) => new Layout(l));
+    return this.#send_request("layouts")?.map((l) => new Layout(l));
   }
   get sessions() {
-    return this.#send_request("sessions").map((s) => new Session(s));
+    return this.#send_request("sessions")?.map((s) => new Session(s));
   }
   get users() {
-    return this.#send_request("users").map((u) => new User(u));
+    return this.#send_request("users")?.map((u) => new User(u));
   }
   hibernate() {
     return this.#send_request("hibernate");
@@ -173,10 +175,11 @@ class GreeterComm {
     return this.#send_request("broadcast", [data]);
   }
   _emit(data) {
-    const broadcast_event = new Event("GreeterBroadcastEvent");
-    broadcast_event.window = null;
-    broadcast_event.data = data;
-    dispatchEvent(broadcast_event);
+    dispatchEvent(
+      new CustomEvent("GreeterBroadcastEvent", {
+        detail: data,
+      }),
+    );
   }
 }
 
@@ -191,15 +194,11 @@ class GreeterConfig {
     return this.#send_request("greeter");
   }
   get layouts() {
-    return send_request("greeter", "layouts").map((l) => new Layout(l));
+    return send_request("greeter", "layouts")?.map((l) => new Layout(l));
   }
 }
 
 class ThemeUtils {
-  #time_language;
-  constructor(time_language = "") {
-    this.#time_language = time_language;
-  }
   #send_request(method, args) {
     return send_request("theme_utils", method, args);
   }
@@ -214,17 +213,16 @@ class ThemeUtils {
    *
    * @param {string}              path        The abs path to desired directory.
    * @param {boolean}             only_images Include only images in the results. Default `true`.
-   * @param {function(string[])}  callback    Callback function to be called with the result.
    */
-  dirlist(path, only_image = true, callback) {
+  async dirlist(path, only_image = true) {
     if ("" === path || "string" !== typeof path) {
       console.error(
         "[ERROR] theme_utils.dirlist(): path must be a non-empty string!",
       );
-      return callback([]);
+      return [];
     } else if (null !== path.match(/^[^/].+/)) {
       console.error("[ERROR] theme_utils.dirlist(): path must be absolute!");
-      return callback([]);
+      return [];
     }
 
     if (null !== path.match(/\/\.+(?=\/)/)) {
@@ -233,56 +231,18 @@ class ThemeUtils {
     }
 
     try {
-      const result = this.#send_request("dirlist", [path, only_image]);
-      callback(result);
-      return result;
+      return this.#send_request("dirlist", [path, only_image]);
     } catch (err) {
       console.error(`[ERROR] theme_utils.dirlist(): ${err}`);
-      return callback([]);
+      return [];
     }
-  }
-  get_current_localized_date() {
-    const locales = [];
-    const time_language = this.#time_language;
-    if ("" !== time_language) {
-      locales.push(time_language);
-    }
-    return new Intl.DateTimeFormat(locales, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    }).format(new Date());
-  }
-  /**
-   * Get the current time in a localized format. Time format and language are auto-detected
-   * by default, but can be set manually in the greeter config file.
-   *   * `language` defaults to the system's language, but can be set manually in the config file.
-   *   * When `time_format` config file option has a valid value, time will be formatted
-   *     according to that value.
-   *   * When `time_format` does not have a valid value, the time format will be `LT`
-   *     which is `1:00 PM` or `13:00` depending on the system's locale.
-   *
-   * @return {string} The current localized time.
-   */
-  get_current_localized_time() {
-    const locales = [];
-    const time_language = this.#time_language;
-    if ("" !== time_language) {
-      locales.push(time_language);
-    }
-    return new Intl.DateTimeFormat(locales, {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date());
   }
 }
 
-window.greeter_comm = new GreeterComm();
-window.greeter_config = new GreeterConfig();
-window.greeter = new Greeter();
-window.theme_utils = new ThemeUtils(
-  window.greeter_config.greeter.time_language,
-);
-window.lightdm = window.greeter;
-window._ready_event = new Event("GreeterReady");
-window.dispatch_ready_event = () => dispatchEvent(window._ready_event);
+globalThis.greeter_comm = new GreeterComm();
+globalThis.greeter_config = new GreeterConfig();
+globalThis.greeter = new Greeter();
+globalThis.theme_utils = new ThemeUtils();
+globalThis.lightdm = globalThis.greeter;
+globalThis._ready_event = new Event("GreeterReady");
+globalThis.dispatch_ready_event = () => dispatchEvent(globalThis._ready_event);
