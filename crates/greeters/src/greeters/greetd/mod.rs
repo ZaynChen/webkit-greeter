@@ -28,10 +28,22 @@ impl GreetdGreeter {
     pub fn new(context: jsc::Context, webview: &WebView) -> Self {
         let mut greeter = GreetdClient::new();
 
+        greeter.connect_show_prompt(clone!(
+            #[strong]
+            webview,
+            move |type_, msg| signals::show_prompt(&webview, type_, msg)
+        ));
+
+        greeter.connect_show_message(clone!(
+            #[strong]
+            webview,
+            move |type_, msg| signals::show_message(&webview, type_, msg)
+        ));
+
         greeter.connect_authentication_complete(clone!(
             #[strong]
             webview,
-            move |_| signals::authentication_complete(&webview)
+            move || signals::authentication_complete(&webview)
         ));
 
         Self {
@@ -73,7 +85,20 @@ impl GreetdGreeter {
                 "layout" => self.set_layout(&params[0].to_string()),
                 "set_language" => self.set_language(&params[0].to_string()),
                 "authenticate" => self.authenticate(params[0].to_string()),
-                "respond" => self.respond(params[0].to_string()),
+                "respond" => {
+                    let param = &params[0];
+                    let response = if param.is_string() {
+                        Some(param.to_string())
+                    } else {
+                        if param.is_null() {
+                            logger::info!("greeter.respond([null])");
+                        } else if param.is_undefined() {
+                            logger::info!("greeter.respond([undefined])");
+                        }
+                        None
+                    };
+                    self.respond(response)
+                }
                 "start_session" => self.start_session(params[0].to_string()),
                 s => {
                     logger::warn!("{s} does not implemented");
@@ -230,40 +255,49 @@ impl GreetdGreeter {
     fn authenticate(&self, username: String) -> jsc::Value {
         let context = &self.context;
         match self.greeter.borrow_mut().create_session(username) {
-            Ok(Response::Success) | Ok(Response::AuthMessage { .. }) => {
-                return jsc::Value::new_boolean(context, true);
+            Ok(Response::Error {
+                description,
+                error_type,
+            }) => logger::error!("Failed to create session: ({error_type:?}, {description})"),
+            Err(e) => {
+                logger::error!("{e}");
+                return jsc::Value::new_boolean(context, false);
             }
-            Ok(Response::Error { description, .. }) => logger::error!("{description}"),
-            Err(e) => logger::error!("{e}"),
+            _ => {}
         }
-        jsc::Value::new_boolean(context, false)
+        jsc::Value::new_boolean(context, true)
     }
 
     fn cancel_authentication(&self) -> jsc::Value {
         let context = &self.context;
         match self.greeter.borrow_mut().cancel_session() {
-            Ok(Response::Success) => {
-                return jsc::Value::new_boolean(context, true);
+            Ok(Response::Error {
+                description,
+                error_type,
+            }) => logger::error!("Failed to cancel session: ({error_type:?}, {description})"),
+            Err(e) => {
+                logger::error!("{e}");
+                return jsc::Value::new_boolean(context, false);
             }
-            Ok(Response::Error { description, .. }) => logger::error!("{description}"),
-            Err(e) => logger::error!("{e}"),
             _ => {}
         }
-        jsc::Value::new_boolean(context, false)
+        jsc::Value::new_boolean(context, true)
     }
 
-    fn respond(&self, response: String) -> jsc::Value {
+    fn respond(&self, response: Option<String>) -> jsc::Value {
         let context = &self.context;
-        match self.greeter.borrow_mut().post_response(Some(response)) {
-            Ok(Response::Success) => {
-                return jsc::Value::new_boolean(context, true);
+        match self.greeter.borrow_mut().post_response(response) {
+            Ok(Response::Error {
+                error_type,
+                description,
+            }) => logger::info!("Failed to respond to greetd: ({error_type:?}, {description})"),
+            Err(e) => {
+                logger::error!("{e}");
+                return jsc::Value::new_boolean(context, false);
             }
-            Ok(Response::Error { description, .. }) => logger::error!("{description}"),
-            Err(e) => logger::error!("{e}"),
             _ => {}
         }
-
-        jsc::Value::new_boolean(context, false)
+        jsc::Value::new_boolean(context, true)
     }
 
     fn start_session(&self, session_key: String) -> jsc::Value {
@@ -279,13 +313,20 @@ impl GreetdGreeter {
             "x" => vec!["XDG_SESSION_TYPE=x11".to_string()],
             _ => vec![],
         };
+        let context = &self.context;
         match self.greeter.borrow_mut().start_session(cmd, env) {
             Ok(Response::Success) => std::process::exit(0),
-            Ok(Response::Error { description, .. }) => logger::error!("{description}"),
-            Err(e) => logger::error!("{e}"),
+            Ok(Response::Error {
+                description,
+                error_type,
+            }) => logger::error!("Failed to start session: ({error_type:?}, {description})"),
+            Err(e) => {
+                logger::error!("{e}");
+                return jsc::Value::new_boolean(context, false);
+            }
             _ => {}
         }
-        jsc::Value::new_boolean(&self.context, false)
+        jsc::Value::new_boolean(context, true)
     }
 }
 
@@ -293,6 +334,18 @@ mod signals {
     use webkit::{
         UserMessage, WebView, gio::Cancellable, glib::variant::ToVariant, prelude::WebViewExt,
     };
+
+    pub(super) fn show_prompt(webview: &WebView, type_: &str, text: &str) {
+        let parameters = ["show_prompt", &format!("[\"{type_}\", \"{text}\"]")].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
+    }
+
+    pub(super) fn show_message(webview: &WebView, type_: &str, text: &str) {
+        let parameters = ["show_message", &format!("[\"{type_}\", \"{text}\"]")].to_variant();
+        let message = UserMessage::new("greeter", Some(&parameters));
+        webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
+    }
 
     pub(super) fn authentication_complete(webview: &WebView) {
         let parameters = ["authentication_complete", "[]"].to_variant();

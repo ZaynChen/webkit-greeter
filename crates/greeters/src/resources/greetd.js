@@ -47,7 +47,6 @@ class Session {
 }
 
 class User {
-  background;
   display_name;
   home_directory;
   image;
