@@ -134,7 +134,10 @@ fn user_message_received(message: &UserMessage, context: &jsc::Context) -> bool 
                 .unwrap()
                 .object_get_property(name)
                 .unwrap_or_else(|| panic!("greeter does not has signal {name}"))
-                .object_invoke_methodv("_emit", &[jsc::Value::from_json(context, json_params)]);
+                .object_invoke_methodv(
+                    "_emit",
+                    &jsc::Value::from_json(context, json_params).to_vec(),
+                );
 
             true
         }
