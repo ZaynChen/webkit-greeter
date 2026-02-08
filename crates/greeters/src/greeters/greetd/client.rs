@@ -270,7 +270,13 @@ impl GreetdClient {
         logger::debug!("Cancelling session");
         self.auth_user = None;
         self.set_auth_state(AuthState::NotStarted);
-        Request::CancelSession.write_to(self.socket()?)?;
+        let socket = self.socket()?;
+        Request::CancelSession.write_to(socket)?;
+        if let Response::AuthMessage { .. } = Response::read_from(socket)? {
+            unimplemented!(
+                "greetd responded with auth request after requesting session cancellation."
+            );
+        }
         Ok(())
     }
 }
