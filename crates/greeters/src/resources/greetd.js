@@ -149,15 +149,37 @@ class Greeter {
   suspend() {
     return this.#send_request("suspend");
   }
-  authenticate(username = null) {
+  /**
+   * Starts the authentication procedure for a user.
+   *
+   * @arg {String} username A username
+   */
+  authenticate(username) {
     return this.#send_request("authenticate", [username]);
   }
-  respond(password) {
+  /**
+   * Provide a response to a prompt.
+   * @arg {string} password
+   * @returns {false} session is not exist or already authenticated, or can
+   *                 not send request to greetd
+   *  otherwise {true} if send request to greetd seccessful
+   */
+  respond(password = null) {
     return this.#send_request("respond", [password]);
   }
+  /**
+   * Cancel the user authentication that is currently in progress.
+   */
   cancel_authentication() {
     return this.#send_request("cancel_authentication");
   }
+  /**
+   * Start a session for the authenticated user.
+   * @arg {String} session The session to log into
+   * @return {@link false} failed to start session
+   *   otherwise exit the webkit-greeter and wait for user session
+   *      and this function will not return
+   */
   start_session(session) {
     return this.#send_request("start_session", [session]);
   }

@@ -3,15 +3,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
 use greetd_ipc::{AuthMessageType, ErrorType, Request, Response, codec::SyncCodec};
+use thiserror::Error as ThisError;
+
 use std::{env, os::unix::net::UnixStream};
 
-enum AuthStatus {
+#[derive(Debug, ThisError)]
+pub enum Error {
+    #[error("greetd ipc error: {0}")]
+    Ipc(#[from] greetd_ipc::codec::Error),
+    #[error("i/o error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("session state error: {0}")]
+    State(String),
+}
+
+#[derive(Clone)]
+enum AuthState {
     NotStarted,
     InAuthentication,
     Authenticated,
 }
 
-pub type GreetdResult = Result<Response, greetd_ipc::codec::Error>;
 type Function2StrArg = Box<dyn Fn(&str, &str)>;
 type Function0Arg = Box<dyn Fn()>;
 
@@ -37,7 +49,7 @@ pub struct GreetdClient {
     ///               -> StartSession  -> 5 secs for remaining successed login flow
     ///               -> CreateSession -> ERROR
     ///               -> PostResponse  -> ERROR
-    auth_status: AuthStatus,
+    auth_state: AuthState,
     /// Callback invoked when greetd has prompt to user
     show_prompt: Vec<Function2StrArg>,
     /// Callback invoked when greetd has (error) message to user
@@ -61,7 +73,7 @@ impl GreetdClient {
         Self {
             socket,
             auth_user: None,
-            auth_status: AuthStatus::NotStarted,
+            auth_state: AuthState::NotStarted,
             show_prompt: Vec::new(),
             show_message: Vec::new(),
             authentication_complete: Vec::new(),
@@ -101,8 +113,8 @@ impl GreetdClient {
         self.authentication_complete.iter().for_each(|f| f())
     }
 
-    fn set_auth_status(&mut self, status: AuthStatus) {
-        self.auth_status = status;
+    fn set_auth_state(&mut self, status: AuthState) {
+        self.auth_state = status;
         if self.is_authenticated() && !self.authentication_complete.is_empty() {
             self.authentication_complete
                 .iter()
@@ -115,11 +127,11 @@ impl GreetdClient {
     }
 
     pub fn in_authentication(&self) -> bool {
-        matches!(self.auth_status, AuthStatus::InAuthentication)
+        matches!(self.auth_state, AuthState::InAuthentication)
     }
 
     pub fn is_authenticated(&self) -> bool {
-        matches!(self.auth_status, AuthStatus::Authenticated)
+        matches!(self.auth_state, AuthState::Authenticated)
     }
 
     fn socket(&mut self) -> Result<&mut UnixStream, std::io::Error> {
@@ -127,6 +139,39 @@ impl GreetdClient {
             std::io::ErrorKind::NotConnected,
             "connect to greetd service failed",
         ))
+    }
+
+    /// return false if response is Response::Error
+    fn handle_greetd_response(&mut self, response: Response) -> bool {
+        match response {
+            Response::Success => self.set_auth_state(AuthState::Authenticated),
+            Response::AuthMessage {
+                auth_message_type,
+                auth_message,
+            } => {
+                self.set_auth_state(AuthState::InAuthentication);
+                logger::debug!("AuthMessage: {auth_message_type:?}, {auth_message}");
+                match auth_message_type {
+                    AuthMessageType::Visible => self.emit_show_prompt("Visible", &auth_message),
+                    AuthMessageType::Secret => self.emit_show_prompt("Secret", &auth_message),
+                    AuthMessageType::Info => self.emit_show_message("Info", &auth_message),
+                    AuthMessageType::Error => self.emit_show_message("Error", &auth_message),
+                }
+            }
+            Response::Error {
+                error_type,
+                description,
+            } => {
+                let type_ = match error_type {
+                    ErrorType::AuthError => "AuthError",
+                    ErrorType::Error => "Error",
+                };
+                logger::error!("Greetd response error: {type_}, {description}");
+                self.emit_show_message(type_, &description);
+                return false;
+            }
+        }
+        true
     }
 
     /// create_session initiates a login attempt for the given user and
@@ -137,43 +182,25 @@ impl GreetdClient {
     ///
     /// If a login flow needs to be aborted at any point, call cancel_session.
     /// Note that the session is cancelled automatically on error.
-    pub fn create_session(&mut self, username: String) -> GreetdResult {
+    pub fn create_session(&mut self, username: String) -> Result<(), Error> {
         logger::debug!("Creating session for user '{username}'");
-        let socket = self.socket()?;
-        let auth_user = username.clone();
-        let request = Request::CreateSession { username };
-        request.write_to(socket)?;
-        Response::read_from(socket).inspect(|resp| match resp {
-            Response::Success => {
-                self.auth_user = Some(auth_user);
-                self.set_auth_status(AuthStatus::Authenticated);
-            }
-            Response::AuthMessage {
-                auth_message_type,
-                auth_message,
-            } => {
-                self.auth_user = Some(auth_user);
-                self.set_auth_status(AuthStatus::InAuthentication);
-                let type_ = match auth_message_type {
-                    AuthMessageType::Visible => "Visible",
-                    AuthMessageType::Secret => "Secret",
-                    AuthMessageType::Info => "Info",
-                    AuthMessageType::Error => "Error",
-                };
-                logger::debug!("AuthMessage: ({type_}, {auth_message})");
-                self.emit_show_prompt(type_, auth_message);
-            }
-            Response::Error {
-                error_type,
-                description,
-            } => {
-                let type_ = match error_type {
-                    ErrorType::AuthError => "AuthError",
-                    ErrorType::Error => "Error",
-                };
-                self.emit_show_message(type_, description);
-            }
-        })
+        if !matches!(self.auth_state, AuthState::NotStarted) {
+            let description = "a session is already in authentication";
+            self.emit_show_message("Info", description);
+            return Err(Error::State(description.to_string()));
+        }
+        let auth_user = Some(username.clone());
+        let response = {
+            let socket = self.socket()?;
+            Request::CreateSession { username }.write_to(socket)?;
+            Response::read_from(socket)?
+        };
+        if self.handle_greetd_response(response) {
+            self.auth_user = auth_user;
+            Ok(())
+        } else {
+            self.cancel_session()
+        }
     }
 
     /// post_response responds to the last auth message, and returns
@@ -181,37 +208,31 @@ impl GreetdClient {
     ///
     /// If an auth message is returned, it should be answered with post_response.
     /// If a success is returned, the session can then be started with start_session
-    pub fn post_response(&mut self, response: Option<String>) -> GreetdResult {
+    pub fn post_response(&mut self, response: Option<String>) -> Result<(), Error> {
         logger::debug!("Sending response to greetd");
-        let socket = self.socket()?;
-        let request = Request::PostAuthMessageResponse { response };
-        request.write_to(socket)?;
-        Response::read_from(socket).inspect(|resp| match resp {
-            Response::Success => self.set_auth_status(AuthStatus::Authenticated),
-            Response::AuthMessage {
-                auth_message_type,
-                auth_message,
-            } => {
-                let type_ = match auth_message_type {
-                    AuthMessageType::Visible => "Visible",
-                    AuthMessageType::Secret => "Secret",
-                    AuthMessageType::Info => "Info",
-                    AuthMessageType::Error => "Error",
-                };
-                logger::info!("[UNEXPECTED]AuthMessage(response): {type_}, {auth_message}");
-                self.emit_show_prompt(type_, auth_message);
+        match self.auth_state.clone() {
+            AuthState::NotStarted => {
+                let description = "no session under authentication";
+                self.emit_show_message("Info", description);
+                return Err(Error::State(description.to_string()));
             }
-            Response::Error {
-                error_type,
-                description,
-            } => {
-                let type_ = match error_type {
-                    ErrorType::AuthError => "AuthError",
-                    ErrorType::Error => "Error",
-                };
-                self.emit_show_message(type_, description);
+            AuthState::Authenticated => {
+                let description = "session is already authenticated".to_string();
+                self.emit_show_message("Info", &description);
+                return Err(Error::State(description.to_string()));
             }
-        })
+            _ => {}
+        }
+        let response = {
+            let socket = self.socket()?;
+            Request::PostAuthMessageResponse { response }.write_to(socket)?;
+            Response::read_from(socket)?
+        };
+        if self.handle_greetd_response(response) {
+            Ok(())
+        } else {
+            self.cancel_session()
+        }
     }
 
     /// Start a successfully logged in session. This will fail if the session
@@ -221,27 +242,23 @@ impl GreetdClient {
     /// to prove itself well-behaved. During this time, call create_session,
     /// post_resonse and cancel_session will response error.
     /// After 5 secs, greetd lose patience and shoot it in the back repeatedly.
-    pub fn start_session(&mut self, cmd: Vec<String>, env: Vec<String>) -> GreetdResult {
+    pub fn start_session(&mut self, cmd: Vec<String>, env: Vec<String>) -> Result<(), Error> {
         logger::debug!("Starting session: cmd: {cmd:?}, env: {env:?}");
-        let socket = self.socket()?;
-        let request = Request::StartSession { cmd, env };
-        request.write_to(socket)?;
-        Response::read_from(socket).inspect(|resp| match resp {
-            Response::Success => {}
-            Response::AuthMessage { .. } => {
-                unimplemented!("greetd responded with auth request after requesting session start.")
-            }
-            Response::Error {
-                error_type,
-                description,
-            } => {
-                let type_ = match error_type {
-                    ErrorType::AuthError => "AuthError",
-                    ErrorType::Error => "Error",
-                };
-                self.emit_show_message(type_, description);
-            }
-        })
+        if !self.is_authenticated() {
+            let description = "session is not ready";
+            self.emit_show_message("Info", description);
+            return Err(Error::State(description.to_string()));
+        }
+        let response = {
+            let socket = self.socket()?;
+            Request::StartSession { cmd, env }.write_to(socket)?;
+            Response::read_from(socket)?
+        };
+        if !self.handle_greetd_response(response) {
+            self.auth_user = None;
+            self.set_auth_state(AuthState::NotStarted);
+        }
+        Ok(())
     }
 
     /// Cancel a session.
@@ -249,30 +266,11 @@ impl GreetdClient {
     ///   after start_session(), this should not be called.
     /// Cancel does not have to be called if an error has been encountered in
     ///   its setup or login flow.
-    /// TODO: Deal with the response from greetd
-    pub fn cancel_session(&mut self) -> GreetdResult {
+    pub fn cancel_session(&mut self) -> Result<(), Error> {
         logger::debug!("Cancelling session");
-        self.set_auth_status(AuthStatus::NotStarted);
         self.auth_user = None;
-        let socket = self.socket()?;
-        Request::CancelSession.write_to(socket)?;
-        Response::read_from(socket).inspect(|resp| match resp {
-            Response::Success => {}
-            Response::AuthMessage { .. } => {
-                unimplemented!(
-                    "greetd resonded with auth request after requesting session cancellation."
-                )
-            }
-            Response::Error {
-                error_type,
-                description,
-            } => {
-                let type_ = match error_type {
-                    ErrorType::AuthError => "AuthError",
-                    ErrorType::Error => "Error",
-                };
-                self.emit_show_message(type_, description);
-            }
-        })
+        self.set_auth_state(AuthState::NotStarted);
+        Request::CancelSession.write_to(self.socket()?)?;
+        Ok(())
     }
 }

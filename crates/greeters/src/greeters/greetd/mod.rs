@@ -90,11 +90,6 @@ impl GreetdGreeter {
                     let response = if param.is_string() {
                         Some(param.to_string())
                     } else {
-                        if param.is_null() {
-                            logger::info!("greeter.respond([null])");
-                        } else if param.is_undefined() {
-                            logger::info!("greeter.respond([undefined])");
-                        }
                         None
                     };
                     self.respond(response)
@@ -254,48 +249,27 @@ impl GreetdGreeter {
 
     fn authenticate(&self, username: String) -> jsc::Value {
         let context = &self.context;
-        match self.greeter.borrow_mut().create_session(username) {
-            Ok(Response::Error {
-                description,
-                error_type,
-            }) => logger::error!("Failed to create session: ({error_type:?}, {description})"),
-            Err(e) => {
-                logger::error!("{e}");
-                return jsc::Value::new_boolean(context, false);
-            }
-            _ => {}
+        if let Err(e) = self.greeter.borrow_mut().create_session(username) {
+            logger::error!("{e}");
+            return jsc::Value::new_boolean(context, false);
         }
         jsc::Value::new_boolean(context, true)
     }
 
     fn cancel_authentication(&self) -> jsc::Value {
         let context = &self.context;
-        match self.greeter.borrow_mut().cancel_session() {
-            Ok(Response::Error {
-                description,
-                error_type,
-            }) => logger::error!("Failed to cancel session: ({error_type:?}, {description})"),
-            Err(e) => {
-                logger::error!("{e}");
-                return jsc::Value::new_boolean(context, false);
-            }
-            _ => {}
+        if let Err(e) = self.greeter.borrow_mut().cancel_session() {
+            logger::error!("{e}");
+            return jsc::Value::new_boolean(context, false);
         }
         jsc::Value::new_boolean(context, true)
     }
 
     fn respond(&self, response: Option<String>) -> jsc::Value {
         let context = &self.context;
-        match self.greeter.borrow_mut().post_response(response) {
-            Ok(Response::Error {
-                error_type,
-                description,
-            }) => logger::info!("Failed to respond to greetd: ({error_type:?}, {description})"),
-            Err(e) => {
-                logger::error!("{e}");
-                return jsc::Value::new_boolean(context, false);
-            }
-            _ => {}
+        if let Err(e) = self.greeter.borrow_mut().post_response(response) {
+            logger::error!("{e}");
+            return jsc::Value::new_boolean(context, false);
         }
         jsc::Value::new_boolean(context, true)
     }
@@ -315,18 +289,12 @@ impl GreetdGreeter {
         };
         let context = &self.context;
         match self.greeter.borrow_mut().start_session(cmd, env) {
-            Ok(Response::Success) => std::process::exit(0),
-            Ok(Response::Error {
-                description,
-                error_type,
-            }) => logger::error!("Failed to start session: ({error_type:?}, {description})"),
+            Ok(()) => std::process::exit(0),
             Err(e) => {
                 logger::error!("{e}");
-                return jsc::Value::new_boolean(context, false);
+                jsc::Value::new_boolean(context, false)
             }
-            _ => {}
         }
-        jsc::Value::new_boolean(context, true)
     }
 }
 

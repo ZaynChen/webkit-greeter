@@ -21,6 +21,7 @@ logger.workspace = true
 pwd = "1.4.0"
 serde = "1.0.228"
 swayipc = { version = "4.0.0", optional = true }
+thiserror = "2.0.18"
 webkit.workspace = true
 xkb-data = { version = "0.2.2", optional = true }
 zbus = "5.12.0"
