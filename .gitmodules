@@ -1,3 +1,4 @@
-[submodule "themes/lightdm-webkit-theme-litarvan"]
-	path = themes/lightdm-webkit-theme-litarvan
+[submodule "themes/litarvan"]
+	path = themes/litarvan
 	url = https://github.com/ZaynChen/lightdm-webkit-theme-litarvan
+	branch = master

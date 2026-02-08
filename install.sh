@@ -33,7 +33,7 @@ build() {
   cargo build --release --locked --no-default-features --features $_pkgname/$dm
 
   CURR_DIR=$(pwd)
-  cd themes/lightdm-webkit-theme-litarvan
+  cd themes/litarvan
   ./build.sh
   cd $CURR_DIR
 }
@@ -51,8 +51,8 @@ package() {
   sudo install -Dm0644 examples/* -t "/usr/share/doc/$_pkgname/examples"
 
   CURR_DIR=$(pwd)
-  cd themes/lightdm-webkit-theme-litarvan
-  _themepkg="lightdm-webkit-theme-litarvan-$(cat version).tar.gz"
+  cd themes/litarvan
+  _themepkg="*-$(cat version).tar.gz"
   sudo install -Dm0755 $_themepkg -t "/usr/share/$_pkgname/themes/litarvan/"
   cd /usr/share/$_pkgname/themes/litarvan/
   sudo tar -xvf $_themepkg
