@@ -9,12 +9,12 @@ primary_monitor = "1"
 # logo_image        = Path to logo image for use by greeter themes.
 # user_image        = Default user image/avatar. This is used by themes for users that have no .face image.
 #
-# NOTE: Paths must be accessible to the lightdm system user account (so they cannot be anywhere in /home)
+# NOTE: Paths must be accessible to the webkit-greeter system user account (so they cannot be anywhere in /home)
 #
 [branding]
 background_images_dir = "/usr/share/backgrounds"
-logo_image = "/usr/share/web-greeter/themes/default/img/antergos-logo-user.png"
-user_image = "/usr/share/web-greeter/themes/default/img/antergos.png"
+logo_image = "/usr/share/webkit-greeter/themes/litarvan/assets/logo.png"
+user_image = "/usr/share/webkit-greeter/themes/litarvan/assets/default_user.png"
 
 # [greeter]
 # debug_mode          = Enable debug mode for the greeter as well as greeter themes.
@@ -33,5 +33,5 @@ detect_theme_errors = true
 screensaver_timeout = 300
 secure_mode = true
 theme = "litarvan"
-# icon_theme = 
+# icon_theme =
 # time_language =
