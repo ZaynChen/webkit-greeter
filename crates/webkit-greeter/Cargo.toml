@@ -10,7 +10,7 @@ categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 gdkx = { package = "gdk4-x11", version = "0.10", features = [
   "xlib",
 ], optional = true }
