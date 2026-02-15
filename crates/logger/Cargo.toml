@@ -5,6 +5,6 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-chrono = "0.4.42"
-env_logger = { version = "0.11.9", features = ["humantime"] }
-log = "0.4.28"
+chrono = "0.4"
+env_logger = { version = "0.11", features = ["humantime"] }
+log = "0.4"

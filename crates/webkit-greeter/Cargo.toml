@@ -10,21 +10,20 @@ categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
-clap = { version = "4.5.58", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 gdkx = { package = "gdk4-x11", version = "0.10", features = [
   "xlib",
 ], optional = true }
 greeters.workspace = true
 gtk.workspace = true
 jsc.workspace = true
-lazy_static = "1.5.0"
 logger.workspace = true
-serde = { version = "1.0.219", features = ["derive"] }
-toml = { version = "1.0.0", features = ["serde"] }
+serde.workspace = true
+toml = { version = "1", features = ["serde"] }
 webkit.workspace = true
 
 [build-dependencies]
-glib-build-tools = "0.21.0"
+glib-build-tools = "0.21"
 
 [features]
 default = ["all"]
