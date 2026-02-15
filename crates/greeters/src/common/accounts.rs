@@ -2,17 +2,24 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use serde::Serialize;
+
 use std::sync::OnceLock;
 
 use super::dbus::AccountsService;
 
+#[derive(Debug, Serialize)]
 pub struct User {
     home_directory: Option<String>,
+    #[serde(rename(serialize = "image"))]
     icon_file: Option<String>,
     language: Option<String>,
+    #[serde(rename(serialize = "display_name"))]
     real_name: Option<String>,
     session: Option<String>,
+    #[serde(skip_serializing)]
     uid: Option<u64>,
+    #[serde(rename(serialize = "username"))]
     user_name: Option<String>,
 }
 

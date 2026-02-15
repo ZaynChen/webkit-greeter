@@ -6,7 +6,7 @@ const send_request = (target, method, args = []) => {
   const request = {
     target,
     method,
-    args,
+    args: JSON.stringify(args),
   };
   return globalThis.send_request(request);
 };
@@ -51,7 +51,6 @@ class User {
   home_directory;
   image;
   language;
-  logged_in;
   session;
   username;
   constructor(user_info) {

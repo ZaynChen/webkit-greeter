@@ -19,6 +19,7 @@ lightdm = { git = "https://github.com/ZaynChen/lightdm-rs.git", version = "0.1.0
 logger.workspace = true
 pwd = "1.4"
 serde.workspace = true
+serde_json.workspace = true
 swayipc = { version = "4.0", optional = true }
 thiserror = "2.0"
 webkit.workspace = true

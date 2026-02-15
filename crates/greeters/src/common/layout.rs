@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use serde::Serialize;
+
 use std::sync::OnceLock;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Layout {
     name: String,
     short_description: Option<String>,

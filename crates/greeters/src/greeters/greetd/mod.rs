@@ -20,12 +20,11 @@ use crate::{
 };
 
 pub struct GreetdGreeter {
-    pub(super) context: jsc::Context,
     greeter: RefCell<GreetdClient>,
 }
 
 impl GreetdGreeter {
-    pub fn new(context: jsc::Context, webview: &WebView) -> Self {
+    pub fn new(webview: &WebView) -> Self {
         let mut greeter = GreetdClient::new();
 
         greeter.connect_show_prompt(clone!(
@@ -47,15 +46,14 @@ impl GreetdGreeter {
         ));
 
         Self {
-            context,
             greeter: RefCell::new(greeter),
         }
     }
 
     pub fn handle(&self, name: &str, json_params: &str) -> Variant {
-        let context = &self.context;
-        let params = jsc::Value::from_json(context, json_params).to_vec();
-        let ret = if params.is_empty() {
+        let val: serde_json::Value = serde_json::from_str(json_params).unwrap();
+        let params = val.as_array().expect("json_param should be array");
+        let json_result = if params.is_empty() {
             match name {
                 "can_hibernate" => self.can_hibernate(),
                 "can_restart" => self.can_reboot(),
@@ -77,203 +75,147 @@ impl GreetdGreeter {
                 "cancel_authentication" => self.cancel_authentication(),
                 s => {
                     logger::warn!("{s} does not implemented");
-                    jsc::Value::new_undefined(context)
+                    "undefined".to_string()
                 }
             }
         } else {
             match name {
-                "layout" => self.set_layout(&params[0].to_string()),
-                "set_language" => self.set_language(&params[0].to_string()),
-                "authenticate" => self.authenticate(params[0].to_string()),
-                "respond" => {
-                    let param = &params[0];
-                    let response = if param.is_string() {
-                        Some(param.to_string())
-                    } else {
-                        None
-                    };
-                    self.respond(response)
-                }
-                "start_session" => self.start_session(params[0].to_string()),
+                "layout" => self.set_layout(params[0].as_str().unwrap()),
+                "authenticate" => self.authenticate(params[0].as_str().unwrap().to_string()),
+                "respond" => self.respond(params[0].as_str().map(|s| s.to_string())),
+                "start_session" => self.start_session(params[0].as_str().unwrap().to_string()),
                 s => {
                     logger::warn!("{s} does not implemented");
-                    jsc::Value::new_undefined(context)
+                    "undefined".to_string()
                 }
             }
         };
-        ret.to_json(0).unwrap_or("undefined".into()).to_variant()
+        json_result.to_variant()
     }
 
-    fn can_hibernate(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, PowerManager::can_hibernate())
+    fn can_hibernate(&self) -> String {
+        PowerManager::can_hibernate().to_string()
     }
 
-    fn can_reboot(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, PowerManager::can_reboot())
+    fn can_reboot(&self) -> String {
+        PowerManager::can_reboot().to_string()
     }
 
-    fn can_shutdown(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, PowerManager::can_power_off())
+    fn can_shutdown(&self) -> String {
+        PowerManager::can_power_off().to_string()
     }
 
-    fn can_suspend(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, PowerManager::can_suspend())
+    fn can_suspend(&self) -> String {
+        PowerManager::can_suspend().to_string()
     }
 
-    fn hibernate(&self) -> jsc::Value {
-        jsc::Value::new_boolean(
-            &self.context,
-            PowerManager::hibernate()
-                .inspect_err(|e| logger::error!("{e}"))
-                .is_ok(),
-        )
+    fn hibernate(&self) -> String {
+        PowerManager::hibernate()
+            .inspect_err(|e| logger::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
-    fn reboot(&self) -> jsc::Value {
-        jsc::Value::new_boolean(
-            &self.context,
-            PowerManager::reboot()
-                .inspect_err(|e| logger::error!("{e}"))
-                .is_ok(),
-        )
+    fn reboot(&self) -> String {
+        PowerManager::reboot()
+            .inspect_err(|e| logger::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
-    fn shutdown(&self) -> jsc::Value {
-        jsc::Value::new_boolean(
-            &self.context,
-            PowerManager::power_off()
-                .inspect_err(|e| logger::error!("{e}"))
-                .is_ok(),
-        )
+    fn shutdown(&self) -> String {
+        PowerManager::power_off()
+            .inspect_err(|e| logger::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
-    fn suspend(&self) -> jsc::Value {
-        jsc::Value::new_boolean(
-            &self.context,
-            PowerManager::suspend()
-                .inspect_err(|e| logger::error!("{e}"))
-                .is_ok(),
-        )
+    fn suspend(&self) -> String {
+        PowerManager::suspend()
+            .inspect_err(|e| logger::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
-    fn authentication_user(&self) -> jsc::Value {
-        jsc::Value::new_string(&self.context, self.greeter.borrow().authentication_user())
+    fn authentication_user(&self) -> String {
+        self.greeter
+            .borrow()
+            .authentication_user()
+            .unwrap_or("null")
+            .to_string()
     }
 
-    fn in_authentication(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, self.greeter.borrow().in_authentication())
+    fn in_authentication(&self) -> String {
+        self.greeter.borrow().in_authentication().to_string()
     }
 
-    fn is_authenticated(&self) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, self.greeter.borrow().is_authenticated())
+    fn is_authenticated(&self) -> String {
+        self.greeter.borrow().is_authenticated().to_string()
     }
 
-    fn language(&self) -> jsc::Value {
-        let context = &self.context;
+    fn language(&self) -> String {
         match LanguageManager::current() {
-            Some(language) => language.to_jscvalue(context),
+            Some(language) => serde_json::to_string(&language).unwrap(),
             None => match LanguageManager::languages().first() {
-                Some(language) => language.to_jscvalue(context),
-                None => jsc::Value::new_null(context),
+                Some(language) => serde_json::to_string(&language).unwrap(),
+                None => "null".to_string(),
             },
         }
     }
 
-    fn set_language(&self, language: &str) -> jsc::Value {
-        let context = &self.context;
-        if let Some(user) = self.greeter.borrow().authentication_user() {
-            if let Err(e) = UserManager::set_language(user, language) {
-                logger::error!("{e}");
-                jsc::Value::new_boolean(context, false)
-            } else {
-                jsc::Value::new_boolean(context, true)
-            }
-        } else {
-            logger::error!("No user is in authentication");
-            jsc::Value::new_boolean(context, false)
-        }
+    fn languages(&self) -> String {
+        serde_json::to_string(LanguageManager::languages()).unwrap()
     }
 
-    fn languages(&self) -> jsc::Value {
-        let context = &self.context;
-        let languages: Vec<_> = LanguageManager::languages()
-            .iter()
-            .map(|language| language.to_jscvalue(context))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &languages)
+    fn layout(&self) -> String {
+        serde_json::to_string(LayoutManager::instance().layout()).unwrap()
     }
 
-    fn layout(&self) -> jsc::Value {
-        LayoutManager::instance()
-            .layout()
-            .to_jscvalue(&self.context)
+    fn set_layout(&self, layout: &str) -> String {
+        LayoutManager::instance().set_layout(layout).to_string()
     }
 
-    fn set_layout(&self, layout: &str) -> jsc::Value {
-        jsc::Value::new_boolean(&self.context, LayoutManager::instance().set_layout(layout))
+    fn layouts(&self) -> String {
+        serde_json::to_string(LayoutManager::instance().layouts()).unwrap()
     }
 
-    fn layouts(&self) -> jsc::Value {
-        let context = &self.context;
-        let layouts: Vec<_> = LayoutManager::instance()
-            .layouts()
-            .iter()
-            .map(|l| l.to_jscvalue(context))
-            .collect();
-        jsc::Value::new_array_from_garray(&self.context, &layouts)
+    fn sessions(&self) -> String {
+        serde_json::to_string(&SessionManager::sessions()).unwrap()
     }
 
-    fn sessions(&self) -> jsc::Value {
-        let context = &self.context;
-        let sessions: Vec<_> = SessionManager::sessions()
-            .iter()
-            .map(|session| session.to_jscvalue(context))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &sessions)
+    fn users(&self) -> String {
+        serde_json::to_string(UserManager::instance().list_users()).unwrap()
     }
 
-    fn users(&self) -> jsc::Value {
-        let context = &self.context;
-        let users: Vec<_> = UserManager::instance()
-            .list_users()
-            .iter()
-            .map(|user| user.to_jscvalue(context))
-            .collect();
-        jsc::Value::new_array_from_garray(context, &users)
-    }
-
-    fn authenticate(&self, username: String) -> jsc::Value {
-        let context = &self.context;
+    fn authenticate(&self, username: String) -> String {
         if let Err(e) = self.greeter.borrow_mut().create_session(username) {
             logger::error!("{e}");
-            return jsc::Value::new_boolean(context, false);
+            return false.to_string();
         }
-        jsc::Value::new_boolean(context, true)
+        true.to_string()
     }
 
-    fn cancel_authentication(&self) -> jsc::Value {
-        let context = &self.context;
+    fn cancel_authentication(&self) -> String {
         if let Err(e) = self.greeter.borrow_mut().cancel_session() {
             logger::error!("{e}");
-            return jsc::Value::new_boolean(context, false);
+            return false.to_string();
         }
-        jsc::Value::new_boolean(context, true)
+        true.to_string()
     }
 
-    fn respond(&self, response: Option<String>) -> jsc::Value {
-        let context = &self.context;
+    fn respond(&self, response: Option<String>) -> String {
         if let Err(e) = self.greeter.borrow_mut().post_response(response) {
             logger::error!("{e}");
-            return jsc::Value::new_boolean(context, false);
+            return false.to_string();
         }
-        jsc::Value::new_boolean(context, true)
+        true.to_string()
     }
 
-    fn start_session(&self, session_key: String) -> jsc::Value {
+    fn start_session(&self, session_key: String) -> String {
         let session = SessionManager::session(&session_key);
         if session.is_none() {
             logger::error!("{session_key} does not exist");
-            return jsc::Value::new_boolean(&self.context, false);
+            return false.to_string();
         }
         let session = session.unwrap();
         let cmd = vec![session.exec().to_string()];
@@ -282,12 +224,11 @@ impl GreetdGreeter {
             "x" => vec!["XDG_SESSION_TYPE=x11".to_string()],
             _ => vec![],
         };
-        let context = &self.context;
         match self.greeter.borrow_mut().start_session(cmd, env) {
             Ok(()) => std::process::exit(0),
             Err(e) => {
                 logger::error!("{e}");
-                jsc::Value::new_boolean(context, false)
+                false.to_string()
             }
         }
     }

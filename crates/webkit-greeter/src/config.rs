@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::constants::{
     CONFIG_PATH, DEFAULT_BACKGROUND_IMAGES_DIR, DEFAULT_THEME, DEFAULT_THEME_DIR,
@@ -46,10 +46,6 @@ impl Config {
         self.greeter.detect_theme_errors
     }
 
-    pub fn screensaver_timeout(&self) -> u32 {
-        self.greeter.screensaver_timeout
-    }
-
     pub fn secure_mode(&self) -> bool {
         self.greeter.secure_mode
     }
@@ -58,24 +54,16 @@ impl Config {
         &self.greeter.theme
     }
 
-    pub fn icon_theme(&self) -> Option<&str> {
-        self.greeter.icon_theme.as_deref()
+    pub fn greeter(&self) -> &Greeter {
+        &self.greeter
     }
 
-    pub fn time_language(&self) -> Option<&str> {
-        self.greeter.time_language.as_deref()
+    pub fn branding(&self) -> &Branding {
+        &self.branding
     }
 
     pub fn background_images_dir(&self) -> &str {
         &self.branding.background_images_dir
-    }
-
-    pub fn logo_image(&self) -> &str {
-        &self.branding.logo_image
-    }
-
-    pub fn user_image(&self) -> &str {
-        &self.branding.user_image
     }
 
     pub fn themes_dir(&self) -> &str {
@@ -95,8 +83,8 @@ impl Config {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
-struct Branding {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Branding {
     background_images_dir: String,
     logo_image: String,
     user_image: String,
@@ -112,8 +100,8 @@ impl Default for Branding {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
-struct Greeter {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Greeter {
     debug_mode: bool,
     detect_theme_errors: bool,
     screensaver_timeout: u32,

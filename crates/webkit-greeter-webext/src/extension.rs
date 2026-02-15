@@ -61,12 +61,12 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                     && let method = request.object_get_property("method")
                     && method.as_ref().is_some_and(|t| t.is_string())
                     && let args = request.object_get_property("args")
-                    && args.as_ref().is_some_and(|t| t.is_array())
+                    && args.as_ref().is_some_and(|t| t.is_string())
                 {
                     (
                         target.unwrap().to_str(),
                         method.unwrap().to_str(),
-                        args.unwrap().to_json(0).unwrap(),
+                        args.unwrap().to_str(),
                     )
                 } else {
                     logger::warn!(
@@ -82,16 +82,15 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                     .block_on(page.send_message_to_view_future(&message))
                     .ok()
                     .map(|reply| {
-                        if let Some(reply_params) = reply.parameters() {
-                            jsc::Value::from_json(
-                                &context,
-                                reply_params
-                                    .str()
-                                    .expect("reply_params is not a json string"),
-                            )
-                        } else {
-                            jsc::Value::new_undefined(&context)
-                        }
+                        reply
+                            .parameters()
+                            .map(|params| {
+                                jsc::Value::from_json(
+                                    &context,
+                                    params.str().expect("reply_params is not a json string"),
+                                )
+                            })
+                            .unwrap_or_else(|| jsc::Value::new_undefined(&context))
                     })
             }
         ),

@@ -894,6 +894,7 @@ dependencies = [
  "logger",
  "pwd",
  "serde",
+ "serde_json",
  "swayipc",
  "thiserror 2.0.18",
  "webkit6",
@@ -2097,6 +2098,7 @@ dependencies = [
  "jsc6",
  "logger",
  "serde",
+ "serde_json",
  "toml 1.0.1+spec-1.1.0",
  "webkit6",
 ]
@@ -2107,6 +2109,7 @@ version = "0.1.0"
 dependencies = [
  "jsc6",
  "logger",
+ "serde_json",
  "webkit-web-process-extension6",
 ]
 

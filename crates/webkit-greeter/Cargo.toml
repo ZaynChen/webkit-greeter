@@ -19,6 +19,7 @@ gtk.workspace = true
 jsc.workspace = true
 logger.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 toml = { version = "1", features = ["serde"] }
 webkit.workspace = true
 

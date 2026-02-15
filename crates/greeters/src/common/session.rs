@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use serde::Serialize;
 use webkit::glib::{
     KEY_FILE_DESKTOP_GROUP, KEY_FILE_DESKTOP_KEY_HIDDEN, KEY_FILE_DESKTOP_KEY_NO_DISPLAY,
     KEY_FILE_DESKTOP_KEY_TRY_EXEC, KeyFile, KeyFileFlags, find_program_in_path, system_data_dirs,
@@ -11,12 +12,14 @@ use std::{collections::HashMap, fs::read_dir, path::PathBuf, sync::OnceLock};
 
 use super::dbus::LogindManager;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Session {
     key: String,
+    #[serde(rename(serialize = "type"))]
     type_: String,
     name: String,
     comment: String,
+    #[serde(skip_serializing)]
     exec: String,
 }
 

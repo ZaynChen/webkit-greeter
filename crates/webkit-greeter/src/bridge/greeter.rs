@@ -23,7 +23,7 @@ impl Greeter {
             #[cfg(feature = "greetd")]
             "greetd" => Self {
                 display_manager: display_manager.to_string(),
-                greetd: Some(GreetdGreeter::new(context, webview)),
+                greetd: Some(GreetdGreeter::new(webview)),
                 #[cfg(feature = "lightdm")]
                 lightdm: None,
             },

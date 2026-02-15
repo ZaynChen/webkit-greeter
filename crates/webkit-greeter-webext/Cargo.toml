@@ -9,10 +9,11 @@ keywords = ["greeter", "web-extension", "webkit"]
 categories = ["GUI"]
 
 [lib]
-name = "webext"
 crate-type = ["cdylib"]
+name = "webext"
 
 [dependencies]
 jsc.workspace = true
 logger.workspace = true
+serde_json.workspace = true
 wwpe.workspace = true

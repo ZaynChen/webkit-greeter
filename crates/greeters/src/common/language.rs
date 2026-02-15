@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
 use gettextrs::{LocaleCategory, dgettext, setlocale};
+use serde::Serialize;
 
 use std::{ffi::CStr, process::Command, sync::OnceLock};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Language {
     code: String,
     name: String,

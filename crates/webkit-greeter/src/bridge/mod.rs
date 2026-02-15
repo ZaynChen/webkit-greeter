@@ -39,10 +39,10 @@ mod dispatcher {
                 config.background_images_dir().to_string(),
             ];
             Self {
-                theme_utils: ThemeUtils::new(context.clone(), &allowed_dirs, config.theme()),
+                theme_utils: ThemeUtils::new(&allowed_dirs, config.theme()),
                 greeter: Greeter::new(context.clone(), &primary, display_manager),
-                greeter_config: GreeterConfig::new(context.clone(), config),
-                greeter_comm: GreeterComm::new(context.clone(), primary, secondaries),
+                greeter_config: GreeterConfig::new(config),
+                greeter_comm: GreeterComm::new(primary, secondaries),
             }
         }
 
