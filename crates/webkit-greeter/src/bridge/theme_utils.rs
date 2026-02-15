@@ -33,12 +33,7 @@ impl ThemeUtils {
         } else {
             jsc::Value::new_undefined(context)
         };
-
-        if let Some(json) = ret.to_json(0) {
-            json.to_variant()
-        } else {
-            "undefined".to_variant()
-        }
+        ret.to_json(0).unwrap_or("undefined".into()).to_variant()
     }
 
     fn dirlist(&self, params: &[jsc::Value]) -> jsc::Value {

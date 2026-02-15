@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-const send_request = (target, method, args) => {
+const send_request = (target, method, args = []) => {
   const request = {
     target,
     method,

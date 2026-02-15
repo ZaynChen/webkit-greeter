@@ -101,12 +101,7 @@ impl GreetdGreeter {
                 }
             }
         };
-
-        if let Some(json) = ret.to_json(0) {
-            json.to_variant()
-        } else {
-            "undefined".to_variant()
-        }
+        ret.to_json(0).unwrap_or("undefined".into()).to_variant()
     }
 
     fn can_hibernate(&self) -> jsc::Value {
@@ -179,7 +174,7 @@ impl GreetdGreeter {
             Some(language) => language.to_jscvalue(context),
             None => match LanguageManager::languages().first() {
                 Some(language) => language.to_jscvalue(context),
-                None => jsc::Value::new_undefined(context),
+                None => jsc::Value::new_null(context),
             },
         }
     }

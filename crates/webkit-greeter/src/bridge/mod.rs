@@ -99,30 +99,19 @@ mod dispatcher {
     }
 
     fn parse(message: &UserMessage) -> Message {
-        let msg_param = message.parameters();
-        if msg_param.is_none() {
-            return Message::Unknown;
-        }
-
-        let msg_param = msg_param.unwrap();
-        if msg_param.is_type(VariantTy::ARRAY) {
-            let p_len = msg_param.n_children();
-            if p_len == 0 || p_len > 2 {
-                return Message::Unknown;
-            }
+        let (method, json_params) = if let Some(msg_param) = message.parameters()
+            && msg_param.is_type(VariantTy::ARRAY)
+            && msg_param.n_children() == 2
+            && let method = msg_param.child_value(0).str()
+            && method.is_some_and(|m| !m.is_empty())
+        {
+            (
+                method.unwrap().to_string(),
+                msg_param.child_value(1).str().unwrap().to_string(),
+            )
         } else {
             return Message::Unknown;
-        }
-
-        let method_var = msg_param.child_value(0);
-        let params_var = msg_param.child_value(1);
-
-        let method = method_var.str().unwrap().to_string();
-        let json_params = params_var.str().unwrap().to_string();
-
-        if method.is_empty() {
-            return Message::Unknown;
-        }
+        };
 
         match message.name().as_deref() {
             Some("greeter") => Message::Greeter((method, json_params)),

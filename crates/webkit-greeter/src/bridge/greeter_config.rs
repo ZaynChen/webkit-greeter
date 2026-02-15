@@ -34,19 +34,13 @@ impl GreeterConfig {
     }
 
     pub(super) fn handle(&self, name: &str) -> Variant {
-        let context = &self.context;
         let ret = match name {
             "branding" => self.branding(),
             "greeter" => self.greeter(),
             // "layouts" => self.layouts(),
-            _ => jsc::Value::new_undefined(context),
+            _ => jsc::Value::new_undefined(&self.context),
         };
-
-        if let Some(json) = ret.to_json(0) {
-            json.to_variant()
-        } else {
-            "undefined".to_variant()
-        }
+        ret.to_json(0).unwrap_or("undefined".into()).to_variant()
     }
 
     fn branding(&self) -> jsc::Value {

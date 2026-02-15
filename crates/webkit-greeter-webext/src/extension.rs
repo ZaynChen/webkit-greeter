@@ -53,29 +53,27 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
             #[strong]
             context,
             move |args| {
-                if args.len() != 1 {
-                    logger::warn!(
-                        "Invalid number of arguments for send_request: len {}",
-                        args.len()
-                    );
-                    return None;
-                }
-                let request = &args[0];
-                if !request.object_has_property("target")
-                    && !request.object_has_property("method")
-                    && !request.object_has_property("args")
+                let (target, method, params) = if args.len() == 1
+                    && let request = &args[0]
+                    && request.is_object()
+                    && let target = request.object_get_property("target")
+                    && target.as_ref().is_some_and(|t| t.is_string())
+                    && let method = request.object_get_property("method")
+                    && method.as_ref().is_some_and(|t| t.is_string())
+                    && let args = request.object_get_property("args")
+                    && args.as_ref().is_some_and(|t| t.is_array())
                 {
-                    logger::warn!("request is not a valid Request(target, method, args)");
-                    return None;
-                }
-
-                let target = request.object_get_property("target").unwrap().to_str();
-                let method = request.object_get_property("method").unwrap().to_str();
-                let params = request
-                    .object_get_property("args")
-                    .unwrap()
-                    .to_json(0)
-                    .unwrap_or("[]".into());
+                    (
+                        target.unwrap().to_str(),
+                        method.unwrap().to_str(),
+                        args.unwrap().to_json(0).unwrap(),
+                    )
+                } else {
+                    logger::warn!(
+                        "Invalid argument for send_request(request: {{target:string, method:string, args:[...]}})",
+                    );
+                    return Some(jsc::Value::new_undefined(&context));
+                };
 
                 // logger::debug!("{target}.{method}({params})");
                 let message =
