@@ -2,11 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-#![allow(dead_code)]
-#![allow(unused_imports)]
-
 mod common;
-mod jscvalue;
 
 mod greeters;
 #[cfg(feature = "greetd")]

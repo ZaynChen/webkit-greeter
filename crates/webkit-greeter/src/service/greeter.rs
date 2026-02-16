@@ -18,7 +18,7 @@ pub(super) struct Greeter {
 }
 
 impl Greeter {
-    pub fn new(context: jsc::Context, webview: &WebView, display_manager: &str) -> Self {
+    pub fn new(webview: &WebView, display_manager: &str) -> Self {
         match display_manager {
             #[cfg(feature = "greetd")]
             "greetd" => Self {
@@ -32,7 +32,7 @@ impl Greeter {
                 display_manager: display_manager.to_string(),
                 #[cfg(feature = "greetd")]
                 greetd: None,
-                lightdm: Some(LightDMGreeter::new(context, webview)),
+                lightdm: Some(LightDMGreeter::new(webview)),
             },
             dm => unimplemented!("Unsupported display manager: {dm}"),
         }

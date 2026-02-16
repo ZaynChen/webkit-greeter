@@ -2,11 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-mod client;
-use client::GreetdClient;
-
-use greetd_ipc::Response;
-use jsc::JSCValueExtManual;
 use webkit::{
     WebView,
     glib::{Variant, clone, variant::ToVariant},
@@ -14,10 +9,10 @@ use webkit::{
 
 use std::cell::RefCell;
 
-use crate::{
-    common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager},
-    jscvalue::ToJSCValue,
-};
+use crate::common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager};
+
+mod client;
+use client::{GreetdClient, MessageType, PromptType};
 
 pub struct GreetdGreeter {
     greeter: RefCell<GreetdClient>,
@@ -239,14 +234,24 @@ mod signals {
         UserMessage, WebView, gio::Cancellable, glib::variant::ToVariant, prelude::WebViewExt,
     };
 
-    pub(super) fn show_prompt(webview: &WebView, type_: &str, text: &str) {
-        let parameters = ["show_prompt", &format!("[\"{type_}\", \"{text}\"]")].to_variant();
+    use super::{MessageType, PromptType};
+
+    pub(super) fn show_prompt(webview: &WebView, text: &str, ty: PromptType) {
+        let type_ = match ty {
+            PromptType::Visible => "Visible",
+            PromptType::Secret => "Secret",
+        };
+        let parameters = ["show_prompt", &format!("[\"{text}\", \"{type_}\"]")].to_variant();
         let message = UserMessage::new("greeter", Some(&parameters));
         webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }
 
-    pub(super) fn show_message(webview: &WebView, type_: &str, text: &str) {
-        let parameters = ["show_message", &format!("[\"{type_}\", \"{text}\"]")].to_variant();
+    pub(super) fn show_message(webview: &WebView, text: &str, ty: MessageType) {
+        let type_ = match ty {
+            MessageType::Info => "Info",
+            MessageType::Error => "Error",
+        };
+        let parameters = ["show_message", &format!("[\"{text}\", \"{type_}\"]")].to_variant();
         let message = UserMessage::new("greeter", Some(&parameters));
         webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
     }

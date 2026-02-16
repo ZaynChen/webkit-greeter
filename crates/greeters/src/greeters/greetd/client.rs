@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-use greetd_ipc::{AuthMessageType, ErrorType, Request, Response, codec::SyncCodec};
+use greetd_ipc::{AuthMessageType, Request, Response, codec::SyncCodec};
 use thiserror::Error as ThisError;
 
 use std::{env, os::unix::net::UnixStream};
@@ -24,8 +24,20 @@ enum AuthState {
     Authenticated,
 }
 
-type Function2StrArg = Box<dyn Fn(&str, &str)>;
-type Function0Arg = Box<dyn Fn()>;
+#[derive(Clone)]
+pub enum PromptType {
+    Visible,
+    Secret,
+}
+
+#[derive(Clone)]
+pub enum MessageType {
+    Info,
+    Error,
+}
+
+type ShowPromptFun = Box<dyn Fn(&str, PromptType)>;
+type ShowMessageFunc = Box<dyn Fn(&str, MessageType)>;
 
 /// Greetd client for communicating with greetd service
 pub struct GreetdClient {
@@ -51,11 +63,11 @@ pub struct GreetdClient {
     ///               -> PostResponse  -> ERROR
     auth_state: AuthState,
     /// Callback invoked when greetd has prompt to user
-    show_prompt: Vec<Function2StrArg>,
+    show_prompt: Vec<ShowPromptFun>,
     /// Callback invoked when greetd has (error) message to user
-    show_message: Vec<Function2StrArg>,
+    show_message: Vec<ShowMessageFunc>,
     /// Callback invoked when AuthStatus switch to Authenticated
-    authentication_complete: Vec<Function0Arg>,
+    authentication_complete: Vec<Box<dyn Fn()>>,
 }
 
 impl GreetdClient {
@@ -82,24 +94,26 @@ impl GreetdClient {
 
     pub fn connect_show_prompt<F>(&mut self, f: F)
     where
-        F: Fn(&str, &str) + 'static,
+        F: Fn(&str, PromptType) + 'static,
     {
         self.show_prompt.push(Box::new(f));
     }
 
-    fn emit_show_prompt(&self, type_: &str, text: &str) {
-        self.show_prompt.iter().for_each(|f| f(type_, text));
+    fn emit_show_prompt(&self, text: &str, type_: PromptType) {
+        self.show_prompt.iter().for_each(|f| f(text, type_.clone()));
     }
 
     pub fn connect_show_message<F>(&mut self, f: F)
     where
-        F: Fn(&str, &str) + 'static,
+        F: Fn(&str, MessageType) + 'static,
     {
         self.show_message.push(Box::new(f));
     }
 
-    fn emit_show_message(&self, type_: &str, text: &str) {
-        self.show_message.iter().for_each(|f| f(type_, text));
+    fn emit_show_message(&self, text: &str, type_: MessageType) {
+        self.show_message
+            .iter()
+            .for_each(|f| f(text, type_.clone()));
     }
 
     pub fn connect_authentication_complete<F>(&mut self, f: F)
@@ -116,9 +130,7 @@ impl GreetdClient {
     fn set_auth_state(&mut self, status: AuthState) {
         self.auth_state = status;
         if self.is_authenticated() && !self.authentication_complete.is_empty() {
-            self.authentication_complete
-                .iter()
-                .for_each(|callback| callback());
+            self.emit_authentication_complete()
         }
     }
 
@@ -152,22 +164,26 @@ impl GreetdClient {
                 self.set_auth_state(AuthState::InAuthentication);
                 logger::debug!("AuthMessage: {auth_message_type:?}, {auth_message}");
                 match auth_message_type {
-                    AuthMessageType::Visible => self.emit_show_prompt("Visible", &auth_message),
-                    AuthMessageType::Secret => self.emit_show_prompt("Secret", &auth_message),
-                    AuthMessageType::Info => self.emit_show_message("Info", &auth_message),
-                    AuthMessageType::Error => self.emit_show_message("Error", &auth_message),
+                    AuthMessageType::Visible => {
+                        self.emit_show_prompt(&auth_message, PromptType::Visible)
+                    }
+                    AuthMessageType::Secret => {
+                        self.emit_show_prompt(&auth_message, PromptType::Secret)
+                    }
+                    AuthMessageType::Info => {
+                        self.emit_show_message(&auth_message, MessageType::Info)
+                    }
+                    AuthMessageType::Error => {
+                        self.emit_show_message(&auth_message, MessageType::Error)
+                    }
                 }
             }
             Response::Error {
                 error_type,
                 description,
             } => {
-                let type_ = match error_type {
-                    ErrorType::AuthError => "AuthError",
-                    ErrorType::Error => "Error",
-                };
-                logger::error!("Greetd response error: {type_}, {description}");
-                self.emit_show_message(type_, &description);
+                logger::error!("Greetd response error: {description}, {error_type:?}");
+                self.emit_show_message(&description, MessageType::Error);
                 return false;
             }
         }
@@ -186,7 +202,7 @@ impl GreetdClient {
         logger::debug!("Creating session for user '{username}'");
         if !matches!(self.auth_state, AuthState::NotStarted) {
             let description = "a session is already in authentication";
-            self.emit_show_message("Info", description);
+            self.emit_show_message(description, MessageType::Info);
             return Err(Error::State(description.to_string()));
         }
         let auth_user = Some(username.clone());
@@ -213,12 +229,12 @@ impl GreetdClient {
         match self.auth_state.clone() {
             AuthState::NotStarted => {
                 let description = "no session under authentication";
-                self.emit_show_message("Info", description);
+                self.emit_show_message(description, MessageType::Info);
                 return Err(Error::State(description.to_string()));
             }
             AuthState::Authenticated => {
                 let description = "session is already authenticated".to_string();
-                self.emit_show_message("Info", &description);
+                self.emit_show_message(&description, MessageType::Info);
                 return Err(Error::State(description.to_string()));
             }
             _ => {}
@@ -246,7 +262,7 @@ impl GreetdClient {
         logger::debug!("Starting session: cmd: {cmd:?}, env: {env:?}");
         if !self.is_authenticated() {
             let description = "session is not ready";
-            self.emit_show_message("Info", description);
+            self.emit_show_message(description, MessageType::Info);
             return Err(Error::State(description.to_string()));
         }
         let response = {

@@ -95,13 +95,7 @@ pub fn on_activate(app: &Application, config: &Config, dm: &str) {
         (primary, secondaries)
     };
 
-    let dispatcher = Dispatcher::new(
-        config.clone(),
-        jsc::Context::default(),
-        primary.clone(),
-        secondaries,
-        dm,
-    );
+    let dispatcher = Dispatcher::new(config.clone(), primary.clone(), secondaries, dm);
     primary.connect_user_message_received(move |webview, message| {
         primary_user_message_received(webview, message, &dispatcher)
     });

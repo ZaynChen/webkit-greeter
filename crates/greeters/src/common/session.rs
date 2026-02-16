@@ -10,8 +10,6 @@ use webkit::glib::{
 
 use std::{collections::HashMap, fs::read_dir, path::PathBuf, sync::OnceLock};
 
-use super::dbus::LogindManager;
-
 #[derive(Debug, Serialize)]
 pub struct Session {
     key: String,
@@ -74,10 +72,6 @@ impl SessionManager {
                 })
                 .collect()
         })
-    }
-
-    pub fn is_logged_in(uid: u32) -> bool {
-        LogindManager::proxy().get_user(uid).is_ok()
     }
 
     pub fn sessions() -> Vec<&'static Session> {

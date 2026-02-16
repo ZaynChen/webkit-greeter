@@ -29,7 +29,6 @@ mod dispatcher {
     impl Dispatcher {
         pub fn new(
             config: Config,
-            context: jsc::Context,
             primary: WebView,
             secondaries: Vec<WebView>,
             display_manager: &str,
@@ -40,7 +39,7 @@ mod dispatcher {
             ];
             Self {
                 theme_utils: ThemeUtils::new(&allowed_dirs, config.theme()),
-                greeter: Greeter::new(context.clone(), &primary, display_manager),
+                greeter: Greeter::new(&primary, display_manager),
                 greeter_config: GreeterConfig::new(config),
                 greeter_comm: GreeterComm::new(primary, secondaries),
             }
