@@ -19,19 +19,19 @@ impl ThemeUtils {
         Self { allowed_dirs }
     }
 
-    pub(super) fn handle(&self, name: &str, json_params: &str) -> glib::Variant {
-        let json_result = if "dirlist" == name && json_params != "[]" {
-            self.dirlist(json_params)
+    pub(super) fn handle(&self, method: &str, json_args: &str) -> glib::Variant {
+        let json_result = if "dirlist" == method && json_args != "[]" {
+            self.dirlist(json_args)
         } else {
             "undefined".to_string()
         };
         json_result.to_variant()
     }
 
-    fn dirlist(&self, json_params: &str) -> String {
-        let params: serde_json::Value =
-            serde_json::from_str(json_params).expect("params is not a JSON string");
-        let (path, only_images) = if let serde_json::Value::Array(arr) = params
+    fn dirlist(&self, json_args: &str) -> String {
+        let args: serde_json::Value =
+            serde_json::from_str(json_args).expect("args is not a JSON string");
+        let (path, only_images) = if let serde_json::Value::Array(arr) = args
             && arr.len() == 2
             && let serde_json::Value::String(path) = arr[0].clone()
             && path != "/"

@@ -11,9 +11,9 @@ use gtk::{
 use webkit::{CacheModel, WebContext, prelude::WebViewExt};
 
 use crate::{
-    bridge::Dispatcher,
     config::Config,
     constants::{GREETER_RESOURCE_PREFIX, WEB_EXTENSIONS_DIR},
+    service::Dispatcher,
     theme::load_theme_html,
     webview::{primary_user_message_received, secondary_user_message_received, webview_new},
     window::setup_window,

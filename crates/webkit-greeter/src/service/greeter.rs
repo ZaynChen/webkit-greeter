@@ -38,12 +38,12 @@ impl Greeter {
         }
     }
 
-    pub fn handle(&self, name: &str, json_params: &str) -> Variant {
+    pub fn handle(&self, name: &str, json_args: &str) -> Variant {
         match self.display_manager.as_str() {
             #[cfg(feature = "greetd")]
-            "greetd" => self.greetd.as_ref().unwrap().handle(name, json_params),
+            "greetd" => self.greetd.as_ref().unwrap().handle(name, json_args),
             #[cfg(feature = "lightdm")]
-            "lightdm" => self.lightdm.as_ref().unwrap().handle(name, json_params),
+            "lightdm" => self.lightdm.as_ref().unwrap().handle(name, json_args),
             dm => unreachable!("Unsupported display manager: {dm}"),
         }
     }

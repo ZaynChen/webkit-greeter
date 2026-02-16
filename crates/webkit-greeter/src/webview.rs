@@ -5,7 +5,7 @@
 use gtk::{AlertDialog, ApplicationWindow, gdk, gio::Cancellable};
 use webkit::{HardwareAccelerationPolicy, Settings, UserMessage, WebView, prelude::*};
 
-use crate::{bridge::Dispatcher, constants::DEFAULT_THEME, theme::load_theme_html};
+use crate::{constants::DEFAULT_THEME, service::Dispatcher, theme::load_theme_html};
 
 pub fn webview_new(debug: bool, theme_file: &str) -> WebView {
     let settings = Settings::builder()
@@ -42,7 +42,7 @@ pub fn primary_user_message_received(
                 .downcast_ref::<ApplicationWindow>()
                 .expect("webview.root is not a ApplicationWindow");
             window.present();
-            logger::debug!("WebKit Greeter started win: {}", window.id());
+            logger::debug!("WebKit Greeter started win: {}(primary)", window.id());
             true
         }
         Some("console") => {
@@ -66,7 +66,7 @@ pub fn secondary_user_message_received(webview: &WebView, message: &UserMessage)
         .downcast_ref::<ApplicationWindow>()
         .expect("webview.root is not a ApplicationWindow");
     window.present();
-    logger::debug!("WebKit Greeter started win: {}", window.id());
+    logger::debug!("WebKit Greeter started win: {}(secondary)", window.id());
     true
 }
 

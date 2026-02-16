@@ -31,8 +31,8 @@ impl GreeterConfig {
         Self { config }
     }
 
-    pub(super) fn handle(&self, name: &str) -> Variant {
-        let json_result = match name {
+    pub(super) fn handle(&self, method: &str) -> Variant {
+        let json_result = match method {
             "branding" => serde_json::to_string(self.branding()).unwrap(),
             "greeter" => serde_json::to_string(self.greeter()).unwrap(),
             _ => "undefined".to_string(),

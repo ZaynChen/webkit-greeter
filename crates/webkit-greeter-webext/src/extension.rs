@@ -52,9 +52,9 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
             page,
             #[strong]
             context,
-            move |args| {
-                let (target, method, params) = if args.len() == 1
-                    && let request = &args[0]
+            move |params| {
+                let (target, method, args) = if params.len() == 1
+                    && let request = &params[0]
                     && request.is_object()
                     && let target = request.object_get_property("target")
                     && target.as_ref().is_some_and(|t| t.is_string())
@@ -75,9 +75,9 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                     return Some(jsc::Value::new_undefined(&context));
                 };
 
-                // logger::debug!("{target}.{method}({params})");
+                // logger::debug!("{target}.{method}({args})");
                 let message =
-                    UserMessage::new(&target, Some(&[method.as_str(), &params].to_variant()));
+                    UserMessage::new(&target, Some(&[method.as_str(), &args].to_variant()));
                 MainContext::default()
                     .block_on(page.send_message_to_view_future(&message))
                     .ok()
@@ -104,55 +104,51 @@ fn user_message_received(message: &UserMessage, context: &jsc::Context) -> bool 
     ) {
         return false;
     }
-
-    let msg_param = message.parameters().unwrap();
-    if msg_param.is_type(VariantTy::ARRAY) {
-        let p_len = msg_param.n_children();
-        if p_len == 0 || p_len > 2 {
-            return false;
-        }
+    let (method, json_args) = if let Some(params) = message.parameters()
+        && params.is_type(VariantTy::ARRAY)
+        && params.n_children() == 2
+        && let method = params.child_value(0).str()
+        && method.is_some_and(|m| !m.is_empty())
+    {
+        (
+            method.unwrap().to_string(),
+            params.child_value(1).str().unwrap().to_string(),
+        )
     } else {
         return false;
-    }
+    };
 
-    let name_var = msg_param.child_value(0);
-    let params_var = msg_param.child_value(1);
-
-    let name = name_var.str().unwrap();
-    let json_params = params_var.str().unwrap();
-
-    // logger::debug!("{}.{name}({json_params})", message.name().unwrap());
     match message.name().as_deref() {
-        Some("greeter") => {
-            let _ = context
-                .global_object()
-                .unwrap()
-                .object_get_property("greeter")
-                .unwrap()
-                .object_get_property(name)
-                .unwrap_or_else(|| panic!("greeter does not has signal {name}"))
-                .object_invoke_methodv(
+        Some("greeter") => match context
+            .global_object()
+            .unwrap()
+            .object_get_property("greeter")
+            .unwrap()
+            .object_get_property(&method)
+        {
+            Some(signal) => {
+                let _ = signal.object_invoke_methodv(
                     "_emit",
-                    &jsc::Value::from_json(context, json_params).to_vec(),
+                    &jsc::Value::from_json(context, &json_args).to_vec(),
                 );
-
-            true
-        }
+                true
+            }
+            None => false,
+        },
         Some("greeter_comm") => {
-            if name != "_emit" {
+            if method != "_emit" {
                 return false;
             }
-
-            let data = jsc::Value::from_json(context, json_params)
-                .object_get_property_at_index(0)
-                .unwrap();
 
             let _ = context
                 .global_object()
                 .unwrap()
                 .object_get_property("greeter_comm")
                 .unwrap()
-                .object_invoke_methodv("_emit", &[data]);
+                .object_invoke_methodv(
+                    "_emit",
+                    &jsc::Value::from_json(context, &json_args).to_vec(),
+                );
 
             true
         }

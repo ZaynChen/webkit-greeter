@@ -21,9 +21,9 @@ impl GreeterComm {
         }
     }
 
-    pub(super) fn handle(&self, name: &str, json_params: &str) -> Variant {
-        let json_result = if "broadcast" == name && json_params != "[]" {
-            self.broadcast(json_params)
+    pub(super) fn handle(&self, method: &str, json_args: &str) -> Variant {
+        let json_result = if "broadcast" == method && json_args != "[]" {
+            self.broadcast(json_args)
         } else {
             "undefined"
         };
@@ -38,12 +38,12 @@ impl GreeterComm {
         &self.secondaries
     }
 
-    fn broadcast(&self, json_params: &str) -> &str {
+    fn broadcast(&self, json_args: &str) -> &str {
         [&self.primary]
             .into_iter()
             .chain(&self.secondaries)
             .for_each(|webview| {
-                let parameters = ["_emit", json_params].to_variant();
+                let parameters = ["_emit", json_args].to_variant();
                 let message = UserMessage::new("greeter_comm", Some(&parameters));
                 webview.send_message_to_page(&message, Cancellable::NONE, |_| {});
             });

@@ -50,10 +50,10 @@ impl GreetdGreeter {
         }
     }
 
-    pub fn handle(&self, name: &str, json_params: &str) -> Variant {
-        let val: serde_json::Value = serde_json::from_str(json_params).unwrap();
-        let params = val.as_array().expect("json_param should be array");
-        let json_result = if params.is_empty() {
+    pub fn handle(&self, name: &str, json_args: &str) -> Variant {
+        let val: serde_json::Value = serde_json::from_str(json_args).unwrap();
+        let args = val.as_array().expect("json_args should be array");
+        let json_result = if args.is_empty() {
             match name {
                 "can_hibernate" => self.can_hibernate(),
                 "can_restart" => self.can_reboot(),
@@ -80,10 +80,10 @@ impl GreetdGreeter {
             }
         } else {
             match name {
-                "layout" => self.set_layout(params[0].as_str().unwrap()),
-                "authenticate" => self.authenticate(params[0].as_str().unwrap().to_string()),
-                "respond" => self.respond(params[0].as_str().map(|s| s.to_string())),
-                "start_session" => self.start_session(params[0].as_str().unwrap().to_string()),
+                "layout" => self.set_layout(args[0].as_str().unwrap()),
+                "authenticate" => self.authenticate(args[0].as_str().unwrap().to_string()),
+                "respond" => self.respond(args[0].as_str().map(|s| s.to_string())),
+                "start_session" => self.start_session(args[0].as_str().unwrap().to_string()),
                 s => {
                     logger::warn!("{s} does not implemented");
                     "undefined".to_string()

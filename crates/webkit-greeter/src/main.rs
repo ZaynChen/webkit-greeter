@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod application;
-mod bridge;
 mod config;
 mod constants;
+mod service;
 mod theme;
 mod webview;
 mod window;

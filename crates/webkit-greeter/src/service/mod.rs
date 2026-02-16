@@ -61,23 +61,23 @@ mod dispatcher {
         pub fn send(&self, message: &UserMessage) {
             let reply = match parse(message) {
                 Message::GreeterConfig((method, _)) => {
-                    // logger::debug!("greeter_config.{method}({json_params})");
+                    // logger::debug!("greeter_config.{method}({json_args})");
                     let reply = self.greeter_config.handle(&method);
                     UserMessage::new("reply", Some(&reply))
                 }
-                Message::GreeterComm((method, json_params)) => {
-                    // logger::debug!("greeter_comm.{method}({json_params})");
-                    let reply = self.greeter_comm.handle(&method, &json_params);
+                Message::GreeterComm((method, json_args)) => {
+                    // logger::debug!("greeter_comm.{method}({json_args})");
+                    let reply = self.greeter_comm.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
-                Message::Greeter((method, json_params)) => {
-                    // logger::debug!("greeter.{method}({json_params})");
-                    let reply = self.greeter.handle(&method, &json_params);
+                Message::Greeter((method, json_args)) => {
+                    // logger::debug!("greeter.{method}({json_args})");
+                    let reply = self.greeter.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
-                Message::ThemeUtils((method, json_params)) => {
-                    // logger::debug!("theme_utils.{method}({json_params})");
-                    let reply = self.theme_utils.handle(&method, &json_params);
+                Message::ThemeUtils((method, json_args)) => {
+                    // logger::debug!("theme_utils.{method}({json_args})");
+                    let reply = self.theme_utils.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
                 _ => {
@@ -99,25 +99,25 @@ mod dispatcher {
     }
 
     fn parse(message: &UserMessage) -> Message {
-        let (method, json_params) = if let Some(msg_param) = message.parameters()
-            && msg_param.is_type(VariantTy::ARRAY)
-            && msg_param.n_children() == 2
-            && let method = msg_param.child_value(0).str()
+        let (method, json_args) = if let Some(params) = message.parameters()
+            && params.is_type(VariantTy::ARRAY)
+            && params.n_children() == 2
+            && let method = params.child_value(0).str()
             && method.is_some_and(|m| !m.is_empty())
         {
             (
                 method.unwrap().to_string(),
-                msg_param.child_value(1).str().unwrap().to_string(),
+                params.child_value(1).str().unwrap().to_string(),
             )
         } else {
             return Message::Unknown;
         };
 
         match message.name().as_deref() {
-            Some("greeter") => Message::Greeter((method, json_params)),
-            Some("greeter_config") => Message::GreeterConfig((method, json_params)),
-            Some("greeter_comm") => Message::GreeterComm((method, json_params)),
-            Some("theme_utils") => Message::ThemeUtils((method, json_params)),
+            Some("greeter") => Message::Greeter((method, json_args)),
+            Some("greeter_config") => Message::GreeterConfig((method, json_args)),
+            Some("greeter_comm") => Message::GreeterComm((method, json_args)),
+            Some("theme_utils") => Message::ThemeUtils((method, json_args)),
             _ => Message::Unknown,
         }
     }

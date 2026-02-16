@@ -89,11 +89,11 @@ impl LightDMGreeter {
         &self.shared_data_directory
     }
 
-    pub fn handle(&self, name: &str, json_params: &str) -> Variant {
+    pub fn handle(&self, method: &str, json_args: &str) -> Variant {
         let context = &self.context;
-        let params = jsc::Value::from_json(context, json_params).to_vec();
-        let ret = if params.is_empty() {
-            match name {
+        let args = jsc::Value::from_json(context, json_args).to_vec();
+        let ret = if args.is_empty() {
+            match method {
                 "authentication_user" => self.authentication_user(),
                 "autologin_guest" => self.autologin_guest(),
                 "autologin_timeout" => self.autologin_timeout(),
@@ -134,12 +134,12 @@ impl LightDMGreeter {
                 }
             }
         } else {
-            match name {
-                "layout" => self.set_layout(params[0].clone()),
-                "authenticate" => self.authenticate(Some(&params[0].to_string())),
-                "respond" => self.respond(&params[0].to_string()),
-                "set_language" => self.set_language(&params[0].to_string()),
-                "start_session" => self.start_session(&params[0].to_string()),
+            match method {
+                "layout" => self.set_layout(args[0].clone()),
+                "authenticate" => self.authenticate(Some(&args[0].to_string())),
+                "respond" => self.respond(&args[0].to_string()),
+                "set_language" => self.set_language(&args[0].to_string()),
+                "start_session" => self.start_session(&args[0].to_string()),
                 s => {
                     logger::warn!("{s} does not implemented");
                     jsc::Value::new_undefined(context)
