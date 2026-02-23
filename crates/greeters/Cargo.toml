@@ -7,7 +7,6 @@ repository.workspace = true
 license = "GPL-3.0-or-later AND LGPL-3.0-or-later"
 keywords = ["greetd", "greeter", "lightdm", "webkit"]
 categories = ["GUI"]
-build = "build.rs"
 
 [dependencies]
 gettext-rs = { version = "0.7", features = ["gettext-system"] }

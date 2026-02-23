@@ -1,0 +1,1 @@
+../../../../themes/webkit-greeter-api/greetd.js

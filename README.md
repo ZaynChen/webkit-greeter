@@ -128,8 +128,8 @@ greeter-session=webkit-greeter
 ## Theme JavaScript API:
 
 API depends on login manager:
-- [greetd.js](./crates/greeters/src/resources/greetd.js) 
-- [lightdm.js](./crates/greeters/src/resources/lightdm.js) 
+- [greetd.js](./themes/webkit-greeter-api/greetd.js) 
+- [lightdm.js](./themes/webkit-greeter-api/lightdm.js) 
 
 The greeter exposes a JavaScript API to themes which they must use to interact with the greeter (in order to facilitate the user login process). For more details, check out the [LightDM WebKit2 Greeter API Documentation](https://doclets.io/Antergos/lightdm-webkit2-greeter/stable). 
 

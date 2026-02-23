@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use crate::common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager};
 
 mod client;
-use client::{GreetdClient, MessageType, PromptType};
+use client::GreetdClient;
 
 pub struct GreetdGreeter {
     greeter: RefCell<GreetdClient>,
@@ -67,7 +67,7 @@ impl GreetdGreeter {
                 "authentication_user" => self.authentication_user(),
                 "in_authentication" => self.in_authentication(),
                 "is_authenticated" => self.is_authenticated(),
-                "cancel_authentication" => self.cancel_authentication(),
+                "cancel_authentication" => self.cancel_session(),
                 s => {
                     logger::warn!("{s} does not implemented");
                     "undefined".to_string()
@@ -76,7 +76,7 @@ impl GreetdGreeter {
         } else {
             match name {
                 "layout" => self.set_layout(args[0].as_str().unwrap()),
-                "authenticate" => self.authenticate(args[0].as_str().unwrap().to_string()),
+                "authenticate" => self.create_session(args[0].as_str().unwrap().to_string()),
                 "respond" => self.respond(args[0].as_str().map(|s| s.to_string())),
                 "start_session" => self.start_session(args[0].as_str().unwrap().to_string()),
                 s => {
@@ -182,7 +182,7 @@ impl GreetdGreeter {
         serde_json::to_string(UserManager::instance().list_users()).unwrap()
     }
 
-    fn authenticate(&self, username: String) -> String {
+    fn create_session(&self, username: String) -> String {
         if let Err(e) = self.greeter.borrow_mut().create_session(username) {
             logger::error!("{e}");
             return false.to_string();
@@ -190,7 +190,7 @@ impl GreetdGreeter {
         true.to_string()
     }
 
-    fn cancel_authentication(&self) -> String {
+    fn cancel_session(&self) -> String {
         if let Err(e) = self.greeter.borrow_mut().cancel_session() {
             logger::error!("{e}");
             return false.to_string();
@@ -234,7 +234,7 @@ mod signals {
         UserMessage, WebView, gio::Cancellable, glib::variant::ToVariant, prelude::WebViewExt,
     };
 
-    use super::{MessageType, PromptType};
+    use super::client::{MessageType, PromptType};
 
     pub(super) fn show_prompt(webview: &WebView, text: &str, ty: PromptType) {
         let type_ = match ty {

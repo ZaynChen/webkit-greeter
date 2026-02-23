@@ -65,7 +65,6 @@ fn main() -> glib::ExitCode {
 // before Application created
 fn register_resources() {
     gio::resources_register_include!("greeter.gresource").expect("Failed to register resources.");
-    greeters::register_api_resource();
 }
 
 // Get current displaymanager managed by systemd.

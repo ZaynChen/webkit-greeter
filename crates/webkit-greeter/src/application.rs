@@ -5,7 +5,7 @@
 use gtk::{
     Application, CssProvider,
     gdk::{Display, Monitor},
-    gio::{ActionEntry, MenuModel},
+    gio::{ActionEntry, File, MenuModel},
     prelude::*,
 };
 use webkit::{CacheModel, WebContext, prelude::WebViewExt};
@@ -19,13 +19,24 @@ use crate::{
     window::setup_window,
 };
 
+fn greeter_api(dm: &str) -> String {
+    let uri = format!("resource:///com/github/zaynchen/webkit-greeter/{dm}.js");
+
+    match File::for_uri(&uri).load_contents(webkit::gio::Cancellable::NONE) {
+        Ok((content, _)) => String::from_utf8(content.to_vec()).unwrap(),
+        Err(e) => {
+            panic!("Failed to read {uri}: {e}");
+        }
+    }
+}
+
 pub fn on_activate(app: &Application, config: &Config, dm: &str) {
     {
-        let api = greeters::greeter_api(dm);
         let webcontext = WebContext::default().expect("default web context does not exist");
         webcontext.set_cache_model(CacheModel::DocumentViewer);
         let secure_mode = config.secure_mode();
         let detect_theme_error = config.detect_theme_errors();
+        let api = greeter_api(dm);
         webcontext.connect_initialize_web_process_extensions(move |context: &WebContext| {
             let data = (secure_mode, detect_theme_error, &api).to_variant();
             logger::debug!("Extension initialized");
