@@ -24,7 +24,7 @@ toml = { version = "1", features = ["serde"] }
 webkit.workspace = true
 
 [build-dependencies]
-glib-build-tools = "0.21"
+glib-build-tools = "0.22"
 
 [features]
 default = ["all"]
