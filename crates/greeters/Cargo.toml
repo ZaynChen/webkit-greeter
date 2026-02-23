@@ -23,7 +23,7 @@ swayipc = { version = "4.0", optional = true }
 thiserror = "2.0"
 webkit.workspace = true
 xkb-data = { version = "0.2", optional = true }
-zbus = "5.12"
+zbus = "5.14"
 
 [build-dependencies]
 glib-build-tools = "0.21"
