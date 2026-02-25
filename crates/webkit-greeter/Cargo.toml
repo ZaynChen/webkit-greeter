@@ -11,9 +11,7 @@ build = "build.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-gdkx = { package = "gdk4-x11", version = "0.10", features = [
-  "xlib",
-], optional = true }
+gdkx = { workspace = true, optional = true }
 greeters.workspace = true
 gtk.workspace = true
 jsc.workspace = true
