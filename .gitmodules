@@ -2,7 +2,3 @@
 	path = themes/litarvan
 	url = git@github.com:ZaynChen/lightdm-webkit-theme-litarvan.git
 	branch = master
-[submodule "themes/webkit-greeter-api"]
-	path = themes/webkit-greeter-api
-	url = git@github.com:ZaynChen/webkit-greeter-api.git
-	branch = main

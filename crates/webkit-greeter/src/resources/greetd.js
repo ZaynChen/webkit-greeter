@@ -1,1 +1,1 @@
-../../../../themes/webkit-greeter-api/greetd.js
+../../../../themes/javascript-api/greetd.js

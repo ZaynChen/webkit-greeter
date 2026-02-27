@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/denoland/deno/refs/heads/main/cli/schemas/config-file.v1.json",
+  "workspace": ["./common", "./greetd", "./lightdm"],
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1"
+  },
+  "tasks": {
+    "bundle": "deno task bundle:greetd && deno task bundle:lightdm",
+    "bundle:greetd": "deno bundle greetd/mod.ts > greetd.js",
+    "bundle:lightdm": "deno bundle lightdm/mod.ts > lightdm.js"
+  }
+}

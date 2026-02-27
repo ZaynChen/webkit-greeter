@@ -1,1 +1,1 @@
-../../../../themes/webkit-greeter-api/lightdm.js
+../../../../themes/javascript-api/lightdm.js

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/denoland/deno/refs/heads/main/cli/schemas/config-file.v1.json",
+  "name": "@scope/common",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./mod.ts",
+    "./api": "./api.ts"
+  },
+  "compilerOptions": {
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "module": "esnext"
+  }
+}
