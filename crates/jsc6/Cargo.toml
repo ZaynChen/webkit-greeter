@@ -1,6 +1,6 @@
 [package]
 name = "jsc6"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 description = "Rust bindings for JavaScriptCore 6"
 documentation = "https://world.pages.gitlab.gnome.org/Rust/webkit6-rs/stable/latest/docs/javascriptcore6"

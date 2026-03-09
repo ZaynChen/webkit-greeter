@@ -14,15 +14,14 @@ edition = "2024"
 repository = "https://github.com/zaynchen/webkit-greeter"
 
 [workspace.dependencies]
-gdkx = { package = "gdk4-x11", version = "0.10", features = ["xlib"] }
 greeters = { path = "crates/greeters" }
-gtk = { package = "gtk4", version = "0.10", features = ["v4_20"] }
-jsc = { package = "jsc6", path = "crates/jsc6", version = "0.5" }
-jsc6 = { package = "javascriptcore6", version = "0.5", features = ["v2_48"] }
 logger = { path = "crates/logger" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-webkit = { package = "webkit6", version = "0.5", features = ["v2_50"] }
-wwpe = { package = "webkit-web-process-extension6", version = "0.5", features = [
-  "v2_48",
-] }
+
+gdkx = { package = "gdk4-x11", version = "0.11", features = ["xlib"] }
+gtk = { package = "gtk4", version = "0.11", features = ["v4_20"] }
+jsc = { package = "jsc6", path = "crates/jsc6", version = "0.6" }
+jsc6 = { package = "javascriptcore6", version = "0.6" }
+webkit = { package = "webkit6", version = "0.6" }
+wwpe = { package = "webkit-web-process-extension6", version = "0.6" }

@@ -11,14 +11,15 @@ build = "build.rs"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-gdkx = { workspace = true, optional = true }
 greeters.workspace = true
-gtk.workspace = true
-jsc.workspace = true
 logger.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml = { version = "1", features = ["serde"] }
+
+gdkx = { workspace = true, optional = true }
+gtk.workspace = true
+jsc.workspace = true
 webkit.workspace = true
 
 [build-dependencies]
@@ -27,6 +28,8 @@ glib-build-tools = "0.22"
 [features]
 default = ["all"]
 all = ["greetd", "lightdm"]
+
 greetd = ["greeters/greetd"]
+
 lightdm = ["greeters/lightdm", "x11"]
 x11 = ["dep:gdkx"]

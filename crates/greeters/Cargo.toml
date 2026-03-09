@@ -7,31 +7,40 @@ repository.workspace = true
 license = "GPL-3.0-or-later AND LGPL-3.0-or-later"
 keywords = ["greetd", "greeter", "lightdm", "webkit"]
 categories = ["GUI"]
+build = "build.rs"
+
+[package.metadata.system-deps]
+liblightdm-gobject-1 = "1"
+json-c = "0.18"
 
 [dependencies]
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
-greetd_ipc = { version = "0.10", features = ["sync-codec"] }
-hyprland = { git = "https://github.com/hyprland-community/hyprland-rs", branch = "master", optional = true }
-jsc.workspace = true
 libc = "0.2"
-lightdm = { git = "https://github.com/ZaynChen/lightdm-rs.git", version = "0.1.0", optional = true }
 logger.workspace = true
-pwd = "1.4"
 serde.workspace = true
 serde_json.workspace = true
-swayipc = { version = "4.0", optional = true }
 thiserror = "2.0"
-webkit.workspace = true
-xkb-data = { version = "0.2", optional = true }
 zbus = "5.14"
 
+jsc.workspace = true
+webkit.workspace = true
+
+greetd_ipc = { version = "0.10", features = ["sync-codec"] }
+
+hyprland = { git = "https://github.com/hyprland-community/hyprland-rs", branch = "master", optional = true }
+swayipc = { version = "4.0", optional = true }
+xkb-data = { version = "0.2", optional = true }
+
 [build-dependencies]
-glib-build-tools = "0.22"
+cc = { version = "1", features = ["parallel"] }
+system-deps = "7"
 
 [features]
 greetd = ["wayland"]
-hyprland = ["dep:hyprland"]
-lightdm = ["dep:lightdm"]
-sway = ["dep:swayipc"]
+lightdm = []
+
 wayland = ["hyprland", "sway", "xkb"]
+
+hyprland = ["dep:hyprland"]
+sway = ["dep:swayipc"]
 xkb = ["dep:xkb-data"]

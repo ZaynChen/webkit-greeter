@@ -159,8 +159,13 @@ fn set_cursor(display: &gtk::gdk::Display) {
             .expect("the display should be x11");
         let root_window = display.xrootwindow();
         unsafe {
-            let cursor = gdkx::x11::xlib::XCreateFontCursor(display.xdisplay(), 68);
-            gdkx::x11::xlib::XDefineCursor(display.xdisplay(), root_window, cursor);
+            match gdkx::x11::xlib::Xlib::open() {
+                Ok(xlib) => {
+                    let cursor = (xlib.XCreateFontCursor)(display.xdisplay(), 68);
+                    (xlib.XDefineCursor)(display.xdisplay(), root_window, cursor);
+                }
+                Err(e) => logger::error!("Failed to open xlib: {e}"),
+            }
         }
     }
 }
