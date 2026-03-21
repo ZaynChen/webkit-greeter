@@ -69,13 +69,13 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                         args.unwrap().to_str(),
                     )
                 } else {
-                    logger::warn!(
+                    log::warn!(
                         "Invalid argument for send_request(request: {{target:string, method:string, args:[...]}})",
                     );
                     return Some(jsc::Value::new_undefined(&context));
                 };
 
-                // logger::debug!("{target}.{method}({args})");
+                // log::debug!("{target}.{method}({args})");
                 let message =
                     UserMessage::new(&target, Some(&[method.as_str(), &args].to_variant()));
                 MainContext::default()

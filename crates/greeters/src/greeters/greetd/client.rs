@@ -3,18 +3,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
 use greetd_ipc::{AuthMessageType, Request, Response, codec::SyncCodec};
-use thiserror::Error as ThisError;
 
 use std::{env, os::unix::net::UnixStream};
 
-#[derive(Debug, ThisError)]
-pub enum Error {
-    #[error("greetd ipc error: {0}")]
-    Ipc(#[from] greetd_ipc::codec::Error),
-    #[error("i/o error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("session state error: {0}")]
-    State(String),
+use super::signals::{MessageType, PromptType};
+use crate::greeters::GreeterError;
+
+impl From<greetd_ipc::codec::Error> for GreeterError {
+    fn from(value: greetd_ipc::codec::Error) -> Self {
+        Self::Ipc(value.to_string())
+    }
 }
 
 #[derive(Clone)]
@@ -22,18 +20,6 @@ enum AuthState {
     NotStarted,
     InAuthentication,
     Authenticated,
-}
-
-#[derive(Clone)]
-pub enum PromptType {
-    Visible,
-    Secret,
-}
-
-#[derive(Clone)]
-pub enum MessageType {
-    Info,
-    Error,
 }
 
 type ShowPromptFun = Box<dyn Fn(&str, PromptType)>;
@@ -72,23 +58,32 @@ pub struct GreetdClient {
 
 impl GreetdClient {
     pub fn new() -> Self {
-        let socket = match env::var("GREETD_SOCK") {
-            Ok(path) => UnixStream::connect(path)
-                .inspect_err(|e| logger::error!("Unable to determine socket to greetd server: {e}"))
-                .ok(),
-            Err(_) => {
-                logger::error!("environment variable 'GREETD_SOCK' not found");
-                None
-            }
-        };
-
         Self {
-            socket,
+            socket: None,
             auth_user: None,
             auth_state: AuthState::NotStarted,
             show_prompt: Vec::new(),
             show_message: Vec::new(),
             authentication_complete: Vec::new(),
+        }
+    }
+
+    pub fn connect_to_daemon(&mut self) -> Result<(), std::io::Error> {
+        match env::var("GREETD_SOCK") {
+            Ok(path) => match UnixStream::connect(path) {
+                Ok(sock) => {
+                    self.socket = Some(sock);
+                    Ok(())
+                }
+                Err(e) => Err(std::io::Error::new(
+                    e.kind(),
+                    "Unable to determine socket to greetd server: {e}",
+                )),
+            },
+            Err(e) => Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("environment variable 'GREETD_SOCK' not found: {e}"),
+            )),
         }
     }
 
@@ -100,7 +95,7 @@ impl GreetdClient {
     }
 
     fn emit_show_prompt(&self, text: &str, type_: PromptType) {
-        self.show_prompt.iter().for_each(|f| f(text, type_.clone()));
+        self.show_prompt.iter().for_each(|f| f(text, type_));
     }
 
     pub fn connect_show_message<F>(&mut self, f: F)
@@ -111,9 +106,7 @@ impl GreetdClient {
     }
 
     fn emit_show_message(&self, text: &str, type_: MessageType) {
-        self.show_message
-            .iter()
-            .for_each(|f| f(text, type_.clone()));
+        self.show_message.iter().for_each(|f| f(text, type_));
     }
 
     pub fn connect_authentication_complete<F>(&mut self, f: F)
@@ -162,7 +155,7 @@ impl GreetdClient {
                 auth_message,
             } => {
                 self.set_auth_state(AuthState::InAuthentication);
-                logger::debug!("AuthMessage: {auth_message_type:?}, {auth_message}");
+                log::debug!("AuthMessage: {auth_message_type:?}, {auth_message}");
                 match auth_message_type {
                     AuthMessageType::Visible => {
                         self.emit_show_prompt(&auth_message, PromptType::Visible)
@@ -182,7 +175,7 @@ impl GreetdClient {
                 error_type,
                 description,
             } => {
-                logger::error!("Greetd response error: {description}, {error_type:?}");
+                log::error!("Greetd response error: {description}, {error_type:?}");
                 self.emit_show_message(&description, MessageType::Error);
                 return false;
             }
@@ -198,12 +191,12 @@ impl GreetdClient {
     ///
     /// If a login flow needs to be aborted at any point, call cancel_session.
     /// Note that the session is cancelled automatically on error.
-    pub fn create_session(&mut self, username: String) -> Result<(), Error> {
-        logger::debug!("Creating session for user '{username}'");
+    pub fn create_session(&mut self, username: String) -> Result<(), GreeterError> {
+        log::debug!("Creating session for user '{username}'");
         if !matches!(self.auth_state, AuthState::NotStarted) {
             let description = "a session is already in authentication";
             self.emit_show_message(description, MessageType::Info);
-            return Err(Error::State(description.to_string()));
+            return Err(GreeterError::State(description.to_string()));
         }
         let auth_user = Some(username.clone());
         let response = {
@@ -224,18 +217,18 @@ impl GreetdClient {
     ///
     /// If an auth message is returned, it should be answered with post_response.
     /// If a success is returned, the session can then be started with start_session
-    pub fn post_response(&mut self, response: Option<String>) -> Result<(), Error> {
-        logger::debug!("Sending response to greetd");
+    pub fn post_response(&mut self, response: Option<String>) -> Result<(), GreeterError> {
+        log::debug!("Sending response to greetd");
         match self.auth_state.clone() {
             AuthState::NotStarted => {
                 let description = "no session under authentication";
                 self.emit_show_message(description, MessageType::Info);
-                return Err(Error::State(description.to_string()));
+                return Err(GreeterError::State(description.to_string()));
             }
             AuthState::Authenticated => {
                 let description = "session is already authenticated".to_string();
                 self.emit_show_message(&description, MessageType::Info);
-                return Err(Error::State(description.to_string()));
+                return Err(GreeterError::State(description.to_string()));
             }
             _ => {}
         }
@@ -258,12 +251,16 @@ impl GreetdClient {
     /// to prove itself well-behaved. During this time, call create_session,
     /// post_resonse and cancel_session will response error.
     /// After 5 secs, greetd lose patience and shoot it in the back repeatedly.
-    pub fn start_session(&mut self, cmd: Vec<String>, env: Vec<String>) -> Result<(), Error> {
-        logger::debug!("Starting session: cmd: {cmd:?}, env: {env:?}");
+    pub fn start_session(
+        &mut self,
+        cmd: Vec<String>,
+        env: Vec<String>,
+    ) -> Result<(), GreeterError> {
+        log::debug!("Starting session: cmd: {cmd:?}, env: {env:?}");
         if !self.is_authenticated() {
             let description = "session is not ready";
             self.emit_show_message(description, MessageType::Info);
-            return Err(Error::State(description.to_string()));
+            return Err(GreeterError::State(description.to_string()));
         }
         let response = {
             let socket = self.socket()?;
@@ -282,8 +279,8 @@ impl GreetdClient {
     ///   after start_session(), this should not be called.
     /// Cancel does not have to be called if an error has been encountered in
     ///   its setup or login flow.
-    pub fn cancel_session(&mut self) -> Result<(), Error> {
-        logger::debug!("Cancelling session");
+    pub fn cancel_session(&mut self) -> Result<(), GreeterError> {
+        log::debug!("Cancelling session");
         self.auth_user = None;
         self.set_auth_state(AuthState::NotStarted);
         let socket = self.socket()?;

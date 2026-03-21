@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod greeter;
 mod greeter_comm;
 mod greeter_config;
 mod theme_utils;
@@ -12,11 +11,12 @@ pub use dispatcher::Dispatcher;
 mod dispatcher {
     use webkit::{UserMessage, WebView, gtk::glib::VariantTy};
 
+    use greeters::Greeter;
+
     use crate::config::Config;
 
     use super::{
-        greeter::Greeter, greeter_comm::GreeterComm, greeter_config::GreeterConfig,
-        theme_utils::ThemeUtils,
+        greeter_comm::GreeterComm, greeter_config::GreeterConfig, theme_utils::ThemeUtils,
     };
 
     pub struct Dispatcher {
@@ -60,31 +60,31 @@ mod dispatcher {
         pub fn send(&self, message: &UserMessage) {
             let reply = match parse(message) {
                 Message::GreeterConfig((method, _)) => {
-                    // logger::debug!("greeter_config.{method}({json_args})");
+                    // log::debug!("greeter_config.{method}({json_args})");
                     let reply = self.greeter_config.handle(&method);
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::GreeterComm((method, json_args)) => {
-                    // logger::debug!("greeter_comm.{method}({json_args})");
+                    // log::debug!("greeter_comm.{method}({json_args})");
                     let reply = self.greeter_comm.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::Greeter((method, json_args)) => {
-                    // logger::debug!("greeter.{method}({json_args})");
+                    // log::debug!("greeter.{method}({json_args})");
                     let reply = self.greeter.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
                 Message::ThemeUtils((method, json_args)) => {
-                    // logger::debug!("theme_utils.{method}({json_args})");
+                    // log::debug!("theme_utils.{method}({json_args})");
                     let reply = self.theme_utils.handle(&method, &json_args);
                     UserMessage::new("reply", Some(&reply))
                 }
                 _ => {
-                    logger::warn!("{:?}-{:?}", message.name(), message.parameters());
+                    log::warn!("{:?}-{:?}", message.name(), message.parameters());
                     UserMessage::new("", None)
                 }
             };
-            // logger::warn!("{:?}-{:?}", reply.name(), reply.parameters());
+            // log::warn!("{:?}-{:?}", reply.name(), reply.parameters());
             message.send_reply(&reply);
         }
     }

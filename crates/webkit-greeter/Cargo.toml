@@ -10,26 +10,18 @@ categories = ["GUI"]
 build = "build.rs"
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 greeters.workspace = true
+log = "0.4"
 logger.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml = { version = "1", features = ["serde"] }
 
-gdkx = { workspace = true, optional = true }
 gtk.workspace = true
 jsc.workspace = true
 webkit.workspace = true
+x11rb = "0.13"
 
 [build-dependencies]
 glib-build-tools = "0.22"
-
-[features]
-default = ["all"]
-all = ["greetd", "lightdm"]
-
-greetd = ["greeters/greetd"]
-
-lightdm = ["greeters/lightdm", "x11"]
-x11 = ["dep:gdkx"]

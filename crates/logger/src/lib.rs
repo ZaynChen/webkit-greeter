@@ -1,8 +1,6 @@
 use std::io::Write;
 
-pub use log::*;
-
-pub fn logger_init(level: LevelFilter) {
+pub fn logger_init(level: log::LevelFilter) {
     env_logger::Builder::new()
         .filter_level(level)
         .format(|buf, record| {

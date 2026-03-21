@@ -81,7 +81,7 @@ fn load_theme_config(theme_dir: &Path) -> (String, Option<String>) {
                 .map(|(k, v)| (k.trim(), v.trim().trim_matches(['\"', '\''])))
                 .collect();
             if config_map.is_empty() {
-                logger::error!("Failed to read theme config file, use default setting");
+                log::error!("Failed to read theme config file, use default setting");
             }
             let primary = config_map
                 .get("primary_html")
@@ -95,7 +95,7 @@ fn load_theme_config(theme_dir: &Path) -> (String, Option<String>) {
             }
         }
         Err(e) => {
-            logger::error!("Theme config was not loaded: {e}");
+            log::error!("Theme config was not loaded: {e}");
             ("index.html".to_string(), None)
         }
     }

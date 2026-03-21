@@ -96,7 +96,7 @@ impl LanguageManager {
                     })
                     .collect::<Vec<_>>(),
                 Err(e) => {
-                    logger::error!("Failed to run 'locale -a': {e}");
+                    log::error!("Failed to run 'locale -a': {e}");
                     Vec::with_capacity(0)
                 }
             }

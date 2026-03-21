@@ -55,7 +55,7 @@ impl ThemeUtils {
         }
 
         if self.allowed_dirs.iter().all(|d| resolved.starts_with(d)) {
-            logger::warn!("Path {resolved:?} is not allowed");
+            log::warn!("Path {resolved:?} is not allowed");
             return "[]".to_string();
         }
 

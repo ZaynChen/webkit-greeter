@@ -34,7 +34,7 @@ impl Config {
             config.set_theme(theme);
         }
 
-        logger::debug!("Configuration loaded");
+        log::debug!("Configuration loaded");
         config
     }
 

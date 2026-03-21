@@ -90,7 +90,7 @@ unsafe extern "C" fn webkit_web_process_extension_initialize_with_user_data(
     extension: *mut WebKitWebProcessExtension,
     user_data: *const GVariant,
 ) {
-    logger::logger_init(logger::LevelFilter::Debug);
+    logger::logger_init(log::LevelFilter::Debug);
 
     let user_data: Variant = unsafe { from_glib_none(user_data) };
     let secure_mode =

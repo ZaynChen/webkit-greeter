@@ -110,10 +110,10 @@ fn load_session_dir(dir: PathBuf, session_type: &str) -> HashMap<String, Session
             let filepath = file.path();
             let filepath_str = filepath.to_str().unwrap();
             if let Err(e) = keyfile.load_from_file(&filepath, KeyFileFlags::NONE) {
-                logger::warn!("Failed to load \"{filepath_str}\": {e}");
+                log::warn!("Failed to load \"{filepath_str}\": {e}");
             } else if keyfile.has_group(KEY_FILE_DESKTOP_GROUP) {
                 if !is_session_desktop_file(&keyfile) {
-                    logger::warn!(
+                    log::warn!(
                         "\"{filepath_str}\" is hidden, {}, {}",
                         "contains non-executable TryExec program",
                         "or is otherwise not capable of being used"
@@ -147,7 +147,7 @@ fn load_session_dir(dir: PathBuf, session_type: &str) -> HashMap<String, Session
                         Session::new(key, session_type.into(), name, comment, exec),
                     ));
                 } else {
-                    logger::warn!("{filepath_str} contains no \"Name\" or \"Exec\" key");
+                    log::warn!("{filepath_str} contains no \"Name\" or \"Exec\" key");
                 }
             }
             None

@@ -33,9 +33,8 @@ fn main() -> glib::ExitCode {
     // HACK: disable webkitgtk DMABUF renderer
     unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
 
-    logger::logger_init(logger::LevelFilter::Debug);
+    logger::logger_init(log::LevelFilter::Debug);
 
-    let dm = current_display_manager();
     let args = CliArgs::parse();
     let config = Config::new(args.debug_mode(), args.theme());
 
@@ -44,7 +43,7 @@ fn main() -> glib::ExitCode {
         return glib::ExitCode::SUCCESS;
     }
 
-    register_resources();
+    gio::resources_register_include!("greeter.gresource").expect("Failed to register resources.");
 
     let webinfo = webkit::ApplicationInfo::new();
     webinfo.set_name(WEBKIT_APPLICATION_INFO);
@@ -54,40 +53,12 @@ fn main() -> glib::ExitCode {
         .flags(Default::default())
         .build();
 
-    app.connect_activate(move |app| on_activate(app, &config, &dm));
+    app.connect_activate(move |app| on_activate(app, &config));
     app.connect_startup(on_startup);
 
     let exit_code = app.run_with_args::<glib::GString>(&[]);
-    logger::debug!("WebKit Greeter stopped");
+    log::debug!("WebKit Greeter stopped");
     exit_code
-}
-
-// before Application created
-fn register_resources() {
-    gio::resources_register_include!("greeter.gresource").expect("Failed to register resources.");
-}
-
-// Get current displaymanager managed by systemd.
-fn current_display_manager() -> String {
-    match std::process::Command::new("systemctl")
-        .arg("--property=Id")
-        .arg("show")
-        .arg("display-manager")
-        .output()
-    {
-        Ok(output) => String::from_utf8(output.stdout)
-            .expect("The output of 'systemctl show display-manager' is not encoded as utf8")
-            .trim()
-            .strip_prefix("Id=")
-            .unwrap()
-            .strip_suffix(".service")
-            .unwrap()
-            .to_string(),
-        Err(e) => {
-            logger::error!("Failed to get current display manager by systemd: {e}");
-            "".to_string()
-        }
-    }
 }
 
 use clap::{Parser, ValueEnum};

@@ -14,9 +14,9 @@ use super::system_conn;
 
 pub struct AccountsService;
 impl AccountsService {
-    pub fn accounts_proxy() -> &'static AccountsProxyBlocking<'static> {
-        static ACCOUNTS_PROXY: OnceLock<AccountsProxyBlocking> = OnceLock::new();
-        ACCOUNTS_PROXY.get_or_init(|| AccountsProxyBlocking::new(system_conn()).unwrap())
+    pub fn accounts_proxy() -> &'static Option<AccountsProxyBlocking<'static>> {
+        static ACCOUNTS_PROXY: OnceLock<Option<AccountsProxyBlocking>> = OnceLock::new();
+        ACCOUNTS_PROXY.get_or_init(|| AccountsProxyBlocking::new(system_conn()).ok())
     }
 
     pub fn user_proxy(o: OwnedObjectPath) -> UserProxyBlocking<'static> {

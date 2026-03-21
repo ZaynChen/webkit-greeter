@@ -19,7 +19,6 @@ logger = { path = "crates/logger" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-gdkx = { package = "gdk4-x11", version = "0.11", features = ["xlib"] }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_20"] }
 jsc = { package = "jsc6", path = "crates/jsc6", version = "0.6" }
 jsc6 = { package = "javascriptcore6", version = "0.6" }

@@ -19,27 +19,17 @@ use crate::{
     window::setup_window,
 };
 
-fn greeter_api(dm: &str) -> String {
-    let uri = format!("resource:///com/github/zaynchen/webkit-greeter/{dm}.js");
-
-    match File::for_uri(&uri).load_contents(webkit::gio::Cancellable::NONE) {
-        Ok((content, _)) => String::from_utf8(content.to_vec()).unwrap(),
-        Err(e) => {
-            panic!("Failed to read {uri}: {e}");
-        }
-    }
-}
-
-pub fn on_activate(app: &Application, config: &Config, dm: &str) {
+pub fn on_activate(app: &Application, config: &Config) {
+    let dm = current_display_manager();
     {
         let webcontext = WebContext::default().expect("default web context does not exist");
         webcontext.set_cache_model(CacheModel::DocumentViewer);
         let secure_mode = config.secure_mode();
         let detect_theme_error = config.detect_theme_errors();
-        let api = greeter_api(dm);
+        let api = greeter_api(&dm);
         webcontext.connect_initialize_web_process_extensions(move |context: &WebContext| {
             let data = (secure_mode, detect_theme_error, &api).to_variant();
-            logger::debug!("Extension initialized");
+            log::debug!("Extension initialized");
 
             context.set_web_process_extensions_directory(WEB_EXTENSIONS_DIR);
             context.set_web_process_extensions_initialization_user_data(&data);
@@ -58,8 +48,11 @@ pub fn on_activate(app: &Application, config: &Config, dm: &str) {
         );
     }
 
-    #[cfg(feature = "x11")]
-    set_cursor(&display);
+    if display.backend().is_x11()
+        && let Err(e) = x11_set_cursor()
+    {
+        log::error!("{e}");
+    }
 
     // In wayland, the position of a window is determined by the compositor,
     // and the application of that window does not have the position information
@@ -106,7 +99,7 @@ pub fn on_activate(app: &Application, config: &Config, dm: &str) {
         (primary, secondaries)
     };
 
-    let dispatcher = Dispatcher::new(config.clone(), primary.clone(), secondaries, dm);
+    let dispatcher = Dispatcher::new(config.clone(), primary.clone(), secondaries, &dm);
     primary.connect_user_message_received(move |webview, message| {
         primary_user_message_received(webview, message, &dispatcher)
     });
@@ -150,22 +143,76 @@ pub fn on_startup(app: &Application) {
     );
 }
 
-#[cfg(feature = "x11")]
-fn set_cursor(display: &gtk::gdk::Display) {
-    if display.backend().is_x11() {
-        logger::debug!("Setup root window cursor: GDK backend is X11");
-        let display = display
-            .downcast_ref::<gdkx::X11Display>()
-            .expect("the display should be x11");
-        let root_window = display.xrootwindow();
-        unsafe {
-            match gdkx::x11::xlib::Xlib::open() {
-                Ok(xlib) => {
-                    let cursor = (xlib.XCreateFontCursor)(display.xdisplay(), 68);
-                    (xlib.XDefineCursor)(display.xdisplay(), root_window, cursor);
-                }
-                Err(e) => logger::error!("Failed to open xlib: {e}"),
-            }
+fn greeter_api(dm: &str) -> String {
+    let uri = format!("resource:///com/github/zaynchen/webkit-greeter/{dm}.js");
+
+    match File::for_uri(&uri).load_contents(webkit::gio::Cancellable::NONE) {
+        Ok((content, _)) => String::from_utf8(content.to_vec()).unwrap(),
+        Err(e) => {
+            panic!("Failed to read {uri}: {e}");
         }
     }
+}
+
+// Get current displaymanager managed by systemd.
+fn current_display_manager() -> String {
+    match std::process::Command::new("systemctl")
+        .arg("--property=Id")
+        .arg("show")
+        .arg("display-manager")
+        .output()
+    {
+        Ok(output) => String::from_utf8(output.stdout)
+            .expect("The output of 'systemctl show display-manager' is not encoded as utf8")
+            .trim()
+            .strip_prefix("Id=")
+            .unwrap()
+            .strip_suffix(".service")
+            .unwrap()
+            .to_string(),
+        Err(e) => {
+            log::error!("Failed to get current display manager by systemd: {e}");
+            "".to_string()
+        }
+    }
+}
+
+fn x11_set_cursor() -> Result<(), Box<dyn std::error::Error>> {
+    use x11rb::{
+        connection::Connection,
+        protocol::xproto::{ChangeWindowAttributesAux, ConnectionExt},
+    };
+
+    let (conn, screen_id) = match x11rb::connect(None) {
+        Ok(reply) => reply,
+        Err(_) => return Ok(()),
+    };
+    log::debug!("Setup root window cursor: GDK backend is X11");
+
+    let font = conn.generate_id()?;
+    conn.open_font(font, b"cursor")?;
+
+    let cursor = conn.generate_id()?;
+    conn.create_glyph_cursor(
+        cursor,
+        font,
+        font,
+        68,
+        68 + 1,
+        0,
+        0,
+        0,
+        u16::MAX,
+        u16::MAX,
+        u16::MAX,
+    )?;
+
+    let attrs = ChangeWindowAttributesAux::default().cursor(cursor);
+    conn.change_window_attributes(conn.setup().roots[screen_id].root, &attrs)?;
+
+    conn.flush()?;
+    conn.free_cursor(cursor)?;
+    conn.close_font(font)?;
+
+    Ok(())
 }

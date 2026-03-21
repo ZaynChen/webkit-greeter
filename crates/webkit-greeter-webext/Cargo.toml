@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 name = "webext"
 
 [dependencies]
+log = "0.4"
 logger.workspace = true
 serde_json.workspace = true
 

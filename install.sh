@@ -10,27 +10,10 @@ if ( ! command -v systemctl status accounts-daemon >/dev/null 2>&1 ) ; then
   exit 1
 fi
 
-echo "1) auto-detect  2) greetd  3) lightdm  4) all"
-read -p "Select the display manager [1]: " opt
-case ${opt:-1} in
-  1)
-    dm=$(systemctl --property=Id show display-manager | cut -d '=' -f 2 | cut -d '.' -f 1) ;;
-  2)
-    dm="greetd" ;;
-  3)
-    dm="lightdm" ;;
-  4)
-    dm="all" ;;
-  *)
-    echo "Sorry, wrong selection $REPLY"
-    exit 1 ;;
-esac
-echo "Display manager: $dm"
-
 _pkgname="webkit-greeter"
 
 build() {
-  cargo build --release --locked --no-default-features --features $_pkgname/$dm
+  cargo build --release --locked
 
   CURR_DIR=$(pwd)
   cd themes/litarvan
@@ -62,6 +45,23 @@ package() {
 build
 
 package
+
+echo "1) auto-detect  2) greetd  3) lightdm  4) all"
+read -p "Select the display manager [1]: " opt
+case ${opt:-1} in
+  1)
+    dm=$(systemctl --property=Id show display-manager | cut -d '=' -f 2 | cut -d '.' -f 1) ;;
+  2)
+    dm="greetd" ;;
+  3)
+    dm="lightdm" ;;
+  4)
+    dm="all" ;;
+  *)
+    echo "Sorry, wrong selection $REPLY"
+    exit 1 ;;
+esac
+echo "Display manager: $dm"
 
 if [ $dm = greetd ] || [ $dm = all ] ; then
   _exampledir="/usr/share/doc/$_pkgname/examples"
