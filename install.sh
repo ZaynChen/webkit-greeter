@@ -5,8 +5,8 @@ if ( ! command -v systemctl >/dev/null 2>&1 ) ; then
   exit 1
 fi
 
-if ( ! command -v systemctl status accounts-daemon >/dev/null 2>&1 ) ; then
-  echo "accountsservice not installed"
+if ( ! command -v WebKitWebDriver >/dev/null 2>&1 ) ; then
+  echo "webkitgtk not installed"
   exit 1
 fi
 
@@ -45,32 +45,3 @@ package() {
 build
 
 package
-
-echo "1) auto-detect  2) greetd  3) lightdm  4) all"
-read -p "Select the display manager [1]: " opt
-case ${opt:-1} in
-  1)
-    dm=$(systemctl --property=Id show display-manager | cut -d '=' -f 2 | cut -d '.' -f 1) ;;
-  2)
-    dm="greetd" ;;
-  3)
-    dm="lightdm" ;;
-  4)
-    dm="all" ;;
-  *)
-    echo "Sorry, wrong selection $REPLY"
-    exit 1 ;;
-esac
-echo "Display manager: $dm"
-
-if [ $dm = greetd ] || [ $dm = all ] ; then
-  _exampledir="/usr/share/doc/$_pkgname/examples"
-  sudo cp "$_exampledir/greetd.conf" "/etc/greetd/greetd.conf"
-  sudo cp "$_exampledir/greetd.pam" "/etc/pam.d/greetd"
-  sudo cp "$_exampledir/hyprland.conf" "/etc/webkit-greeter/hyprland.conf"
-  sudo cp "$_exampledir/sway.conf" "/etc/webkit-greeter/sway.conf"
-fi
-
-if [ $dm = lightdm ] || [ $dm = all ] ; then
-  sudo cp "/usr/share/doc/$_pkgname/examples/$_pkgname.desktop" "/usr/share/xgreeters/$_pkgname.desktop"
-fi
