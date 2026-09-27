@@ -36,3 +36,24 @@ hl.config({
   },
   input = { natural_scroll = true }
 })
+
+
+local dsp     = hl.dsp
+local mainMod = "SUPER" -- Sets "Windows" key as main modifier
+local l       = "left"
+local d       = "down"
+local u       = "up"
+local r       = "right"
+local function keybind(keys) return table.concat(keys, " + ") end
+
+-- Move focus with mainMod + arrow keys
+hl.bind(keybind({ mainMod, l }), dsp.focus({ direction = "left" }))
+hl.bind(keybind({ mainMod, d }), dsp.focus({ direction = "down" }))
+hl.bind(keybind({ mainMod, u }), dsp.focus({ direction = "up" }))
+hl.bind(keybind({ mainMod, r }), dsp.focus({ direction = "right" }))
+
+-- Move focus with mainMod + h/j/k/l
+hl.bind(keybind({ mainMod, "H" }), dsp.focus({ direction = "left" }))
+hl.bind(keybind({ mainMod, "J" }), dsp.focus({ direction = "down" }))
+hl.bind(keybind({ mainMod, "K" }), dsp.focus({ direction = "up" }))
+hl.bind(keybind({ mainMod, "L" }), dsp.focus({ direction = "right" }))

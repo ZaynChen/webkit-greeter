@@ -9,7 +9,7 @@ keywords = ["greetd", "greeter", "lightdm", "webkit"]
 categories = ["GUI"]
 
 [dependencies]
-gettext-rs = { version = "0.7", features = ["gettext-system"] }
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
 libc = "0.2"
 log = "0.4"
 pwd = "1"
@@ -28,5 +28,5 @@ lightdm_client = "0.1"
 # keyboard layouts
 hyprland = { git = "https://github.com/hyprland-community/hyprland-rs", branch = "master" }
 swayipc = "4.0"
-x11rb = "0.13"
+x11rb = "0.14"
 xkb-data = "0.2"

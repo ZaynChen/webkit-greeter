@@ -58,10 +58,12 @@ impl LanguageManager {
                     .split('\n')
                     .filter(|code| code.ends_with(".utf8"))
                     .map(|code| {
-                        let current = setlocale(LocaleCategory::LcAll, []).unwrap();
+                        let current = unsafe { setlocale(LocaleCategory::LcAll, []) }.unwrap();
 
-                        setlocale(LocaleCategory::LcIdentification, code);
-                        setlocale(LocaleCategory::LcMessages, "");
+                        unsafe {
+                            setlocale(LocaleCategory::LcIdentification, code);
+                            setlocale(LocaleCategory::LcMessages, "");
+                        }
 
                         let language_en = unsafe {
                             CStr::from_ptr(libc::nl_langinfo(_NL_IDENTIFICATION_LANGUAGE))
@@ -87,7 +89,9 @@ impl LanguageManager {
                             dgettext("iso_3166-1", &territory_en)
                         };
 
-                        setlocale(LocaleCategory::LcAll, current);
+                        unsafe {
+                            setlocale(LocaleCategory::LcAll, current);
+                        }
                         Language {
                             code: code.to_string(),
                             name,

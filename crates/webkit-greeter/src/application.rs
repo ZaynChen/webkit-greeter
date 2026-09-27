@@ -84,7 +84,6 @@ pub fn on_activate(app: &Application, config: &Config) {
             .first()
             .unwrap_or_else(|| panic!("primary monitor \"{primary_monitor}\" does not exist"));
         setup_window(&primary, app, primary_monitor, debug);
-        primary.grab_focus();
 
         let secondaries = secondary_monitors
             .iter()

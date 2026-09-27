@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use gtk::{AlertDialog, ApplicationWindow, gdk, gio::Cancellable};
-use webkit::{HardwareAccelerationPolicy, Settings, UserMessage, WebView, prelude::*};
+use webkit::{Settings, UserMessage, WebView, prelude::*};
 
 use crate::{constants::DEFAULT_THEME, service::Dispatcher, theme::load_theme_html};
 
@@ -11,10 +11,6 @@ pub fn webview_new(debug: bool, theme_file: &str) -> WebView {
     let settings = Settings::builder()
         .allow_file_access_from_file_urls(true)
         .allow_universal_access_from_file_urls(true)
-        .enable_page_cache(true)
-        .enable_html5_local_storage(true)
-        .enable_webgl(true)
-        .hardware_acceleration_policy(HardwareAccelerationPolicy::Always)
         .enable_developer_extras(debug)
         .build();
 
@@ -42,6 +38,7 @@ pub fn primary_user_message_received(
                 .downcast_ref::<ApplicationWindow>()
                 .expect("webview.root is not a ApplicationWindow");
             window.present();
+            webview.grab_focus();
             log::debug!("WebKit Greeter started win: {}(primary)", window.id());
             true
         }

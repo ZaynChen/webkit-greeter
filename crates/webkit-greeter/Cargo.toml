@@ -21,7 +21,7 @@ toml = { version = "1", features = ["serde"] }
 gtk.workspace = true
 jsc.workspace = true
 webkit.workspace = true
-x11rb = "0.13"
+x11rb = "0.14"
 
 [build-dependencies]
 glib-build-tools = "0.22"
