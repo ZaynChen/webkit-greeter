@@ -11,9 +11,9 @@ use super::system_conn;
 
 pub struct LogindManager;
 impl LogindManager {
-    pub fn proxy() -> &'static ManagerProxyBlocking<'static> {
-        static MANAGER: OnceLock<ManagerProxyBlocking> = OnceLock::new();
-        MANAGER.get_or_init(|| ManagerProxyBlocking::new(system_conn()).unwrap())
+    pub fn proxy() -> &'static ManagerProxy<'static> {
+        static MANAGER: OnceLock<ManagerProxy> = OnceLock::new();
+        MANAGER.get_or_init(|| zbus::block_on(ManagerProxy::new(system_conn())).unwrap())
     }
 }
 
@@ -21,9 +21,9 @@ impl LogindManager {
 #[derive(Debug, Type, Serialize, Deserialize)]
 struct LoginSession {
     session_id: String,
-    object_path: zbus::zvariant::OwnedObjectPath,
+    object_path: zbus::OwnedObjectPath,
     runtime_path: String,
-    fifo_fd: zbus::zvariant::OwnedFd,
+    fifo_fd: zbus::OwnedFd,
     uid: u32,
     seat_id: String,
     vtnr: u32,
@@ -37,7 +37,7 @@ struct Session {
     uid: u32,
     user_name: String,
     seat_id: String,
-    object_path: zbus::zvariant::OwnedObjectPath,
+    object_path: zbus::OwnedObjectPath,
 }
 
 #[allow(unused)]
@@ -52,7 +52,7 @@ struct SessionExt {
     tty: String,
     idle: bool,
     idle_timestamp: u64,
-    object_path: zbus::zvariant::OwnedObjectPath,
+    object_path: zbus::OwnedObjectPath,
 }
 
 #[allow(unused)]
@@ -138,7 +138,7 @@ pub trait Manager {
         remote: bool,
         remote_user: &str,
         remote_host: &str,
-        properties: &[&(&str, &zbus::zvariant::Value<'_>)],
+        properties: &[&(&str, &zbus::Variant<'_>)],
     ) -> zbus::Result<LoginSession>;
 
     /// CreateSessionWithPIDFD method
@@ -147,7 +147,7 @@ pub trait Manager {
     fn create_session_with_pidfd(
         &self,
         uid: u32,
-        pidfd: zbus::zvariant::Fd<'_>,
+        pidfd: zbus::Fd<'_>,
         service: &str,
         type_: &str,
         class: &str,
@@ -160,28 +160,28 @@ pub trait Manager {
         remote_user: &str,
         remote_host: &str,
         flags: u64,
-        properties: &[&(&str, &zbus::zvariant::Value<'_>)],
+        properties: &[&(&str, &zbus::Variant<'_>)],
     ) -> zbus::Result<LoginSession>;
 
     /// FlushDevices method
     fn flush_devices(&self, interactive: bool) -> zbus::Result<()>;
 
     /// GetSeat method
-    fn get_seat(&self, seat_id: &str) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn get_seat(&self, seat_id: &str) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// GetSession method
-    fn get_session(&self, session_id: &str) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn get_session(&self, session_id: &str) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// GetSessionByPID method
     #[zbus(name = "GetSessionByPID")]
-    fn get_session_by_pid(&self, pid: u32) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn get_session_by_pid(&self, pid: u32) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// GetUser method
-    fn get_user(&self, uid: u32) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn get_user(&self, uid: u32) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// GetUserByPID method
     #[zbus(name = "GetUserByPID")]
-    fn get_user_by_pid(&self, pid: u32) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn get_user_by_pid(&self, pid: u32) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// Halt method
     fn halt(&self, interactive: bool) -> zbus::Result<()>;
@@ -202,13 +202,7 @@ pub trait Manager {
     fn hybrid_sleep_with_flags(&self, flags: u64) -> zbus::Result<()>;
 
     /// Inhibit method
-    fn inhibit(
-        &self,
-        what: &str,
-        who: &str,
-        why: &str,
-        mode: &str,
-    ) -> zbus::Result<zbus::zvariant::OwnedFd>;
+    fn inhibit(&self, what: &str, who: &str, why: &str, mode: &str) -> zbus::Result<zbus::OwnedFd>;
 
     /// KillSession method
     fn kill_session(&self, session_id: &str, whom: &str, signal_number: i32) -> zbus::Result<()>;
@@ -220,7 +214,7 @@ pub trait Manager {
     fn list_inhibitors(&self) -> zbus::Result<Vec<Inhibitor>>;
 
     /// ListSeats method
-    fn list_seats(&self) -> zbus::Result<Vec<(String, zbus::zvariant::OwnedObjectPath)>>;
+    fn list_seats(&self) -> zbus::Result<Vec<(String, zbus::OwnedObjectPath)>>;
 
     /// ListSessions method
     fn list_sessions(&self) -> zbus::Result<Vec<Session>>;
@@ -229,7 +223,7 @@ pub trait Manager {
     fn list_sessions_ex(&self) -> zbus::Result<Vec<SessionExt>>;
 
     /// ListUsers method
-    fn list_users(&self) -> zbus::Result<Vec<(u32, String, zbus::zvariant::OwnedObjectPath)>>;
+    fn list_users(&self) -> zbus::Result<Vec<(u32, String, zbus::OwnedObjectPath)>>;
 
     /// LockSession method
     fn lock_session(&self, session_id: &str) -> zbus::Result<()>;
@@ -312,7 +306,7 @@ pub trait Manager {
     fn prepare_for_shutdown_with_metadata(
         &self,
         start: bool,
-        metadata: std::collections::HashMap<&str, zbus::zvariant::Value<'_>>,
+        metadata: std::collections::HashMap<&str, zbus::Variant<'_>>,
     ) -> zbus::Result<()>;
 
     /// PrepareForSleep signal
@@ -321,55 +315,39 @@ pub trait Manager {
 
     /// SeatNew signal
     #[zbus(signal)]
-    fn seat_new(
-        &self,
-        seat_id: &str,
-        object_path: zbus::zvariant::ObjectPath<'_>,
-    ) -> zbus::Result<()>;
+    fn seat_new(&self, seat_id: &str, object_path: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// SeatRemoved signal
     #[zbus(signal)]
-    fn seat_removed(
-        &self,
-        seat_id: &str,
-        object_path: zbus::zvariant::ObjectPath<'_>,
-    ) -> zbus::Result<()>;
+    fn seat_removed(&self, seat_id: &str, object_path: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// SecureAttentionKey signal
     #[zbus(signal)]
     fn secure_attention_key(
         &self,
         seat_id: &str,
-        object_path: zbus::zvariant::ObjectPath<'_>,
+        object_path: zbus::ObjectPath<'_>,
     ) -> zbus::Result<()>;
 
     /// SessionNew signal
     #[zbus(signal)]
-    fn session_new(
-        &self,
-        session_id: &str,
-        object_path: zbus::zvariant::ObjectPath<'_>,
-    ) -> zbus::Result<()>;
+    fn session_new(&self, session_id: &str, object_path: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// SessionRemoved signal
     #[zbus(signal)]
     fn session_removed(
         &self,
         session_id: &str,
-        object_path: zbus::zvariant::ObjectPath<'_>,
+        object_path: zbus::ObjectPath<'_>,
     ) -> zbus::Result<()>;
 
     /// UserNew signal
     #[zbus(signal)]
-    fn user_new(&self, uid: u32, object_path: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn user_new(&self, uid: u32, object_path: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// UserRemoved signal
     #[zbus(signal)]
-    fn user_removed(
-        &self,
-        uid: u32,
-        object_path: zbus::zvariant::ObjectPath<'_>,
-    ) -> zbus::Result<()>;
+    fn user_removed(&self, uid: u32, object_path: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// BlockInhibited property
     #[zbus(property)]
@@ -521,7 +499,7 @@ pub trait Manager {
     #[zbus(property)]
     fn preparing_for_shutdown_with_metadata(
         &self,
-    ) -> zbus::Result<std::collections::HashMap<String, zbus::zvariant::OwnedValue>>;
+    ) -> zbus::Result<std::collections::HashMap<String, zbus::OwnedVariant>>;
 
     /// PreparingForSleep property
     #[zbus(property)]

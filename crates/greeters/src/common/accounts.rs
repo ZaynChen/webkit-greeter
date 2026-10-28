@@ -88,21 +88,22 @@ impl UserManager {
         static USER_MANAGER: OnceLock<UserManager> = OnceLock::new();
         USER_MANAGER.get_or_init(|| {
             let mut users = match AccountsService::accounts_proxy() {
-                Some(accounts_proxy) => accounts_proxy
-                    .list_cached_users()
-                    .unwrap()
+                Some(accounts_proxy) => zbus::block_on(accounts_proxy.list_cached_users())
+                    .unwrap_or_default()
                     .into_iter()
                     .map(|o| {
                         let user = AccountsService::user_proxy(o);
-                        User::new(
-                            user.home_directory().ok(),
-                            user.icon_file().ok(),
-                            user.language().ok(),
-                            user.real_name().ok(),
-                            user.session().ok(),
-                            user.uid().map(|u| u as u32).ok(),
-                            user.user_name().ok(),
-                        )
+                        zbus::block_on(async {
+                            User::new(
+                                user.home_directory().await.ok(),
+                                user.icon_file().await.ok(),
+                                user.language().await.ok(),
+                                user.real_name().await.ok(),
+                                user.session().await.ok(),
+                                user.uid().await.map(|u| u as u32).ok(),
+                                user.user_name().await.ok(),
+                            )
+                        })
                     })
                     .collect(),
                 None => vec![],
@@ -142,11 +143,10 @@ impl UserManager {
 
     pub fn set_language(username: &str, language: &str) -> Result<(), String> {
         match AccountsService::accounts_proxy() {
-            Some(proxy) => proxy
-                .find_user_by_name(username)
-                .and_then(|o| AccountsService::user_proxy(o).set_language(language))
+            Some(proxy) => zbus::block_on(proxy.find_user_by_name(username))
+                .and_then(|o| zbus::block_on(AccountsService::user_proxy(o).set_language(language)))
                 .map_err(|e| e.to_string()),
-            None => Err("Failed to connect to accountsservice".to_string()),
+            None => Err("Failed to connect to accountsservice".into()),
         }
     }
 }

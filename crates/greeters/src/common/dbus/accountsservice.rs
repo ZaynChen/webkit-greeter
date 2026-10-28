@@ -3,10 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
 use serde::{Deserialize, Serialize};
-use zbus::{
-    proxy,
-    zvariant::{OwnedObjectPath, OwnedValue, Type, Value, as_value},
-};
+use zbus::{OwnedObjectPath, OwnedVariant, Type, Variant, as_variant, proxy};
 
 use std::{collections::HashMap, sync::OnceLock};
 
@@ -14,17 +11,13 @@ use super::system_conn;
 
 pub struct AccountsService;
 impl AccountsService {
-    pub fn accounts_proxy() -> &'static Option<AccountsProxyBlocking<'static>> {
-        static ACCOUNTS_PROXY: OnceLock<Option<AccountsProxyBlocking>> = OnceLock::new();
-        ACCOUNTS_PROXY.get_or_init(|| AccountsProxyBlocking::new(system_conn()).ok())
+    pub fn accounts_proxy() -> &'static Option<AccountsProxy<'static>> {
+        static ACCOUNTS_PROXY: OnceLock<Option<AccountsProxy>> = OnceLock::new();
+        ACCOUNTS_PROXY.get_or_init(|| zbus::block_on(AccountsProxy::new(system_conn())).ok())
     }
 
-    pub fn user_proxy(o: OwnedObjectPath) -> UserProxyBlocking<'static> {
-        UserProxyBlocking::builder(system_conn())
-            .path(o)
-            .unwrap()
-            .build()
-            .unwrap()
+    pub fn user_proxy(o: OwnedObjectPath) -> UserProxy<'static> {
+        zbus::block_on(UserProxy::builder(system_conn()).path(o).build()).unwrap()
     }
 }
 
@@ -35,7 +28,7 @@ impl AccountsService {
 )]
 pub trait Accounts {
     /// CacheUser method
-    fn cache_user(&self, name: &str) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn cache_user(&self, name: &str) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// CreateUser method
     fn create_user(
@@ -43,37 +36,37 @@ pub trait Accounts {
         name: &str,
         fullname: &str,
         account_type: i32,
-    ) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    ) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// DeleteUser method
     fn delete_user(&self, id: i64, remove_files: bool) -> zbus::Result<()>;
 
     /// FindUserById method
-    fn find_user_by_id(&self, id: i64) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn find_user_by_id(&self, id: i64) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// FindUserByName method
-    fn find_user_by_name(&self, name: &str) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+    fn find_user_by_name(&self, name: &str) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// GetUsersLanguages method
     fn get_users_languages(&self) -> zbus::Result<Vec<String>>;
 
     /// ListCachedUsers method
-    fn list_cached_users(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
+    fn list_cached_users(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
 
     /// UncacheUser method
     fn uncache_user(&self, name: &str) -> zbus::Result<()>;
 
     /// UserAdded signal
     #[zbus(signal)]
-    fn user_added(&self, user: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn user_added(&self, user: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// UserDeleted signal
     #[zbus(signal)]
-    fn user_deleted(&self, user: zbus::zvariant::ObjectPath<'_>) -> zbus::Result<()>;
+    fn user_deleted(&self, user: zbus::ObjectPath<'_>) -> zbus::Result<()>;
 
     /// AutomaticLoginUsers property
     #[zbus(property)]
-    fn automatic_login_users(&self) -> zbus::Result<Vec<zbus::zvariant::OwnedObjectPath>>;
+    fn automatic_login_users(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
 
     /// DaemonVersion property
     #[zbus(property)]
@@ -88,15 +81,15 @@ pub trait Accounts {
     fn has_no_users(&self) -> zbus::Result<bool>;
 }
 
-#[derive(Debug, Type, Value, OwnedValue, Deserialize, Serialize)]
+#[derive(Debug, Type, Variant, OwnedVariant, Deserialize, Serialize)]
 #[zvariant(signature = "dict")]
 struct LoginHistory {
-    #[serde(with = "as_value")]
+    #[serde(with = "as_variant")]
     login_time: i64,
-    #[serde(with = "as_value")]
+    #[serde(with = "as_variant")]
     logout_time: i64,
     #[serde(flatten)]
-    extra: HashMap<String, OwnedValue>,
+    extra: HashMap<String, OwnedVariant>,
 }
 
 #[proxy(

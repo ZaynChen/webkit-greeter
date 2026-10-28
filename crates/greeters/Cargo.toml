@@ -15,7 +15,7 @@ log = "0.4"
 pwd = "1"
 serde.workspace = true
 serde_json.workspace = true
-zbus = "5"
+zbus = "6"
 
 thiserror = "2"
 
