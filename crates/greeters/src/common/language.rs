@@ -14,20 +14,6 @@ pub struct Language {
     territory: String,
 }
 
-impl Language {
-    pub fn code(&self) -> &str {
-        &self.code
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn territory(&self) -> &str {
-        &self.territory
-    }
-}
-
 pub struct LanguageManager;
 impl LanguageManager {
     pub fn current() -> Option<Language> {

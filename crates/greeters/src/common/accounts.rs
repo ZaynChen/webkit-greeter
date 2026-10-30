@@ -10,15 +10,22 @@ use super::dbus::AccountsService;
 
 #[derive(Debug, Serialize)]
 pub struct User {
+    /// HomeDirectory property
     home_directory: Option<String>,
+    /// IconFile property
     #[serde(rename(serialize = "image"))]
     icon_file: Option<String>,
+    /// Language property
     language: Option<String>,
+    /// RealName property
     #[serde(rename(serialize = "display_name"))]
     real_name: Option<String>,
+    /// Session property
     session: Option<String>,
+    /// Uid property
     #[serde(skip_serializing)]
     uid: Option<u32>,
+    /// UserName property
     #[serde(rename(serialize = "username"))]
     user_name: Option<String>,
 }
@@ -42,40 +49,6 @@ impl User {
             uid,
             user_name,
         }
-    }
-    /// HomeDirectory property
-    pub fn home_directory(&self) -> Option<&str> {
-        self.home_directory.as_deref()
-    }
-
-    /// IconFile property
-    pub fn icon_file(&self) -> Option<&str> {
-        self.icon_file.as_deref()
-    }
-
-    /// Language property
-    pub fn language(&self) -> Option<&str> {
-        self.language.as_deref()
-    }
-
-    /// RealName property
-    pub fn real_name(&self) -> Option<&str> {
-        self.real_name.as_deref()
-    }
-
-    /// Session property
-    pub fn session(&self) -> Option<&str> {
-        self.session.as_deref()
-    }
-
-    /// Uid property
-    pub fn uid(&self) -> Option<u32> {
-        self.uid
-    }
-
-    /// UserName property
-    pub fn user_name(&self) -> Option<&str> {
-        self.user_name.as_deref()
     }
 }
 
@@ -122,15 +95,15 @@ impl UserManager {
                 })
                 .filter(|u| {
                     let (uid_min, uid_max) = get_uid_minmax();
-                    u.uid().is_some_and(|uid| uid_min <= uid && uid <= uid_max)
+                    u.uid.is_some_and(|uid| uid_min <= uid && uid <= uid_max)
                 })
                 .collect();
 
-            let uids: Vec<_> = users.iter().map(|u| u.uid()).collect();
+            let uids: Vec<_> = users.iter().map(|u| u.uid).collect();
             users.extend(
                 pwd_users
                     .into_iter()
-                    .filter(|u| !uids.contains(&u.uid()))
+                    .filter(|u| !uids.contains(&u.uid))
                     .collect::<Vec<_>>(),
             );
             Self { users }
@@ -141,14 +114,14 @@ impl UserManager {
         &self.users
     }
 
-    pub fn set_language(username: &str, language: &str) -> Result<(), String> {
-        match AccountsService::accounts_proxy() {
-            Some(proxy) => zbus::block_on(proxy.find_user_by_name(username))
-                .and_then(|o| zbus::block_on(AccountsService::user_proxy(o).set_language(language)))
-                .map_err(|e| e.to_string()),
-            None => Err("Failed to connect to accountsservice".into()),
-        }
-    }
+    // pub fn set_language(username: &str, language: &str) -> Result<(), String> {
+    //     match AccountsService::accounts_proxy() {
+    //         Some(proxy) => zbus::block_on(proxy.find_user_by_name(username))
+    //             .and_then(|o| zbus::block_on(AccountsService::user_proxy(o).set_language(language)))
+    //             .map_err(|e| e.to_string()),
+    //         None => Err("Failed to connect to accountsservice".into()),
+    //     }
+    // }
 }
 
 fn get_uid_minmax() -> (u32, u32) {

@@ -2,14 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
+use lightdm_client::Greeter;
 use webkit::{
     WebView,
     glib::{self, clone},
 };
 
 use super::signals;
-
-use lightdm_client::Greeter;
 
 pub struct LightDMGreeter {
     greeter: Greeter,
@@ -135,12 +134,6 @@ impl LightDMGreeter {
         } else {
             true.to_string()
         }
-        // if let Err(e) = self.greeter.start_session_sync(session) {
-        //     log::error!("{e}");
-        //     false.to_string()
-        // } else {
-        //     true.to_string()
-        // }
     }
 
     fn autologin_guest_hint(&self) -> String {

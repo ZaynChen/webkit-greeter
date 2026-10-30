@@ -40,14 +40,6 @@ impl Session {
         &self.type_
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn comment(&self) -> &str {
-        &self.comment
-    }
-
     pub fn exec(&self) -> &str {
         &self.exec
     }

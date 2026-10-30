@@ -9,13 +9,9 @@ mod signals;
 pub use greetd::GreetdGreeter;
 pub use lightdm::LightDMGreeter;
 
-use crate::common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager};
-
-use webkit::glib::variant::ToVariant;
-
-use webkit::glib::Variant;
-
 use thiserror::Error as ThisError;
+use webkit::glib::{Variant, variant::ToVariant};
+
 #[derive(Debug, ThisError)]
 pub enum GreeterError {
     #[error("ipc error: {0}")]
@@ -33,6 +29,8 @@ impl From<std::io::Error> for GreeterError {
         Self::Io(value.to_string())
     }
 }
+
+use crate::common::{LanguageManager, LayoutManager, PowerManager, SessionManager, UserManager};
 
 pub struct Greeter {
     display_manager: String,

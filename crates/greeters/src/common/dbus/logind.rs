@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
-use std::sync::OnceLock;
-
 use serde::{Deserialize, Serialize};
 use zbus::{proxy, zvariant::Type};
+
+use std::sync::OnceLock;
 
 use super::system_conn;
 

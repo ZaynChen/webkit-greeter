@@ -1,11 +1,11 @@
 [package]
 name = "greeters"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 description = "greeters for WebKit Greeter"
 repository.workspace = true
 license = "GPL-3.0-or-later AND LGPL-3.0-or-later"
-keywords = ["greetd", "greeter", "lightdm", "webkit"]
+keywords = ["greetd", "greeter", "lightdm", "wayland", "webkit"]
 categories = ["GUI"]
 
 [dependencies]
@@ -26,7 +26,6 @@ greetd_ipc = { version = "0.10", features = ["sync-codec"] }
 lightdm_client = "0.1"
 
 # keyboard layouts
-hyprland = { git = "https://github.com/hyprland-community/hyprland-rs", branch = "master" }
 swayipc = "4.0"
 x11rb = "0.14"
 xkb-data = "0.2"

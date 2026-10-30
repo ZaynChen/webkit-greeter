@@ -1,5 +1,3 @@
-local hl = hl
-
 hl.on("hyprland.start", function()
   local log = "/var/log/webkit-greeter/greeter.log"
   local old = "/var/log/webkit-greeter/greeter.old.log"

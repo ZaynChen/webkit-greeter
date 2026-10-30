@@ -6,8 +6,9 @@ use greetd_ipc::{AuthMessageType, Request, Response, codec::SyncCodec};
 
 use std::{env, os::unix::net::UnixStream};
 
-use super::signals::{MessageType, PromptType};
 use crate::greeters::GreeterError;
+
+use super::signals::{MessageType, PromptType};
 
 impl From<greetd_ipc::codec::Error> for GreeterError {
     fn from(value: greetd_ipc::codec::Error) -> Self {

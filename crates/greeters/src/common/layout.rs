@@ -26,10 +26,6 @@ impl Layout {
         &self.name
     }
 
-    pub fn short_description(&self) -> Option<&str> {
-        self.short_description.as_deref()
-    }
-
     pub fn description(&self) -> &str {
         &self.description
     }
@@ -118,8 +114,13 @@ fn switch_keyboard_layout(layout: &str, layouts: &[Layout]) -> bool {
         Ok("wayland") => match std::env::var("XDG_CURRENT_DESKTOP").as_deref() {
             Ok("Hyprland") => hyprland::switch_xkb_layout(idx as u8)
                 .inspect_err(|e| log::error!("Failed to set keyboard layout to {layout}: {e}"))
-                .is_ok(),
-            Ok("sway") => hyprland::switch_xkb_layout(idx as u8)
+                .is_ok_and(|ok| {
+                    if !ok {
+                        log::error!("Failed to set keyboard layout to {layout}");
+                    }
+                    ok
+                }),
+            Ok("sway") => sway::switch_xkb_layout(idx as u8)
                 .inspect_err(|e| log::error!("Failed to set keyboard layout to {layout}: {e}"))
                 .is_ok(),
             Ok(s) => {
@@ -175,44 +176,57 @@ fn system_layouts() -> Vec<Layout> {
 }
 
 mod hyprland {
-    use hyprland::shared::HyprData;
-
     use super::{Layout, system_layouts};
-
     pub(super) fn xkb_layouts() -> Vec<Layout> {
         let sys_layouts = system_layouts();
-        let keyboard = hyprland::data::Devices::get()
-            .expect("Failed to get hyprland devices")
-            .keyboards
-            .into_iter()
-            .find(|kb| kb.main)
-            .expect("No main keyboard found");
-        let layout_names = keyboard.layout;
+        let layout_names = keyboard_layouts().unwrap_or_default();
         sys_layouts
             .into_iter()
-            .filter(|l| layout_names.split(',').any(|name| name == l.name()))
+            .filter(|l| layout_names.iter().any(|name| name == l.name()))
             .collect()
     }
 
     pub(super) fn xkb_layout(layouts: &[Layout]) -> &Layout {
-        let active_keymap = hyprland::data::Devices::get()
-            .expect("Failed to get hyprland devices")
-            .keyboards
-            .into_iter()
-            .find(|kb| kb.main)
-            .expect("No main keyboard found")
-            .active_keymap;
+        let active_keymap = active_keymap();
         layouts
             .iter()
-            .find(|l| l.description() == active_keymap)
+            .find(|l| Some(l.description()) == active_keymap.as_deref())
             .unwrap()
     }
 
-    pub(super) fn switch_xkb_layout(idx: u8) -> Result<(), hyprland::error::HyprError> {
-        hyprland::ctl::switch_xkb_layout::call(
-            "current",
-            hyprland::ctl::switch_xkb_layout::SwitchXKBLayoutCmdTypes::Id(idx),
-        )
+    pub(super) fn switch_xkb_layout(idx: u8) -> Result<bool, std::io::Error> {
+        std::process::Command::new("hyprctl")
+            .args(["switchxkblayout", "current", &idx.to_string()])
+            .output()
+            .map(|output| String::from_utf8(output.stdout).is_ok_and(|s| s.trim() == "ok"))
+    }
+
+    fn main_keyboard() -> Option<serde_json::Value> {
+        if let Ok(output) = std::process::Command::new("hyprctl")
+            .args(["-j", "devices"])
+            .output()
+            && let Ok(s) = String::from_utf8(output.stdout)
+            && let Ok(d) = serde_json::from_str::<serde_json::Value>(&s)
+            && let Some(ks) = d["keyboards"].as_array()
+        {
+            ks.iter()
+                .find(|k| k["main"].as_bool().is_some_and(|main| main))
+                .cloned()
+        } else {
+            None
+        }
+    }
+
+    fn active_keymap() -> Option<String> {
+        main_keyboard().and_then(|kb| kb["active_keymap"].as_str().map(str::to_string))
+    }
+
+    fn keyboard_layouts() -> Option<Vec<String>> {
+        main_keyboard().and_then(|kb| {
+            kb["layout"]
+                .as_str()
+                .map(|s| s.split(',').map(str::to_string).collect())
+        })
     }
 }
 

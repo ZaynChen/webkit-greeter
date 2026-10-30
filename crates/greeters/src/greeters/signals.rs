@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later AND LGPL-3.0-or-later
 
 use webkit::{
-    UserMessage, WebView, gio::Cancellable, glib::variant::ToVariant, prelude::WebViewExt,
+    UserMessage, WebView,
+    gio::Cancellable,
+    glib::{self, variant::ToVariant},
+    prelude::WebViewExt,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -13,14 +16,14 @@ pub enum PromptType {
 }
 
 impl TryFrom<u32> for PromptType {
-    type Error = webkit::glib::Error;
+    type Error = glib::Error;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(Self::Visible),
             1 => Ok(Self::Secret),
-            _ => Err(webkit::glib::Error::new(
-                webkit::glib::ConvertError::Failed,
+            _ => Err(glib::Error::new(
+                glib::ConvertError::Failed,
                 "invalid prompt type",
             )),
         }
@@ -34,14 +37,14 @@ pub enum MessageType {
 }
 
 impl TryFrom<u32> for MessageType {
-    type Error = webkit::glib::Error;
+    type Error = glib::Error;
 
     fn try_from(value: u32) -> Result<Self, <Self as TryFrom<u32>>::Error> {
         match value {
             0 => Ok(Self::Info),
             1 => Ok(Self::Error),
-            _ => Err(webkit::glib::Error::new(
-                webkit::glib::ConvertError::Failed,
+            _ => Err(glib::Error::new(
+                glib::ConvertError::Failed,
                 "invalid message type",
             )),
         }

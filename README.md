@@ -59,7 +59,7 @@ Manifest:
 - `/usr/lib/sysusers.d/webkit-greeter.conf`
 - `/usr/lib/tmpfiles.d/webkit-greeter.conf`
 - `/usr/share/doc/webkit-greeter/examples/greetd.conf`
-- `/usr/share/doc/webkit-greeter/examples/greetd.pam`
+- `/usr/share/doc/webkit-greeter/examples/greetd.pam_`
 - `/usr/share/doc/webkit-greeter/examples/hyprland.lua`
 - `/usr/share/doc/webkit-greeter/examples/sway.conf`
 - `/usr/share/doc/webkit-greeter/examples/webkit-greeter.desktop`
