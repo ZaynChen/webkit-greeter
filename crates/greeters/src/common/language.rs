@@ -17,16 +17,16 @@ pub struct Language {
 pub struct LanguageManager;
 impl LanguageManager {
     pub fn current() -> Option<Language> {
-        let lang = std::env::var("LANG");
-        match lang {
-            Ok(code) => {
-                let prefix = code.split('.').next();
-                Self::languages()
-                    .iter()
-                    .find(|l| l.code.split('.').next() == prefix)
-                    .cloned()
-            }
-            Err(_) => None,
+        if let Ok(code) = std::env::var("LANG")
+            && (code.ends_with(".utf8") || code.ends_with(".UTF-8"))
+        {
+            let lang = code.split('.').next();
+            Self::languages()
+                .iter()
+                .find(|l| l.code.split('.').next() == lang)
+                .cloned()
+        } else {
+            None
         }
     }
 
@@ -39,55 +39,55 @@ impl LanguageManager {
             gettextrs::bindtextdomain("iso_3166-1", "/usr/share/locale").unwrap();
 
             match Command::new("locale").arg("-a").output() {
-                Ok(output) => String::from_utf8(output.stdout)
-                    .expect("The output of 'locale -a' is not encoded as utf8")
-                    .split('\n')
-                    .filter(|code| code.ends_with(".utf8"))
-                    .map(|code| {
-                        let current = unsafe { setlocale(LocaleCategory::LcAll, []) }.unwrap();
+                Ok(output) => String::from_utf8(output.stdout).map_or_default(|s| {
+                    s.split('\n')
+                        .filter(|code| code.ends_with(".utf8"))
+                        .map(|code| {
+                            let current = unsafe { setlocale(LocaleCategory::LcAll, []) }.unwrap();
 
-                        unsafe {
-                            setlocale(LocaleCategory::LcIdentification, code);
-                            setlocale(LocaleCategory::LcMessages, "");
-                        }
+                            unsafe {
+                                setlocale(LocaleCategory::LcIdentification, code);
+                                setlocale(LocaleCategory::LcMessages, "");
+                            }
 
-                        let language_en = unsafe {
-                            CStr::from_ptr(libc::nl_langinfo(_NL_IDENTIFICATION_LANGUAGE))
-                                .to_string_lossy()
-                                .to_string()
-                        };
-                        let name = if language_en.is_empty() {
-                            code.split(['_', '.', '@']).next().unwrap().to_string()
-                        } else {
-                            dgettext("iso_639-3", &language_en)
-                        };
-                        let territory_en = unsafe {
-                            CStr::from_ptr(libc::nl_langinfo(_NL_IDENTIFICATION_TERRITORY))
-                                .to_string_lossy()
-                                .to_string()
-                        };
+                            let language_en = unsafe {
+                                CStr::from_ptr(libc::nl_langinfo(_NL_IDENTIFICATION_LANGUAGE))
+                                    .to_string_lossy()
+                                    .to_string()
+                            };
+                            let name = if language_en.is_empty() {
+                                code.split(['_', '.', '@']).next().unwrap().to_string()
+                            } else {
+                                dgettext("iso_639-3", &language_en)
+                            };
+                            let territory_en = unsafe {
+                                CStr::from_ptr(libc::nl_langinfo(_NL_IDENTIFICATION_TERRITORY))
+                                    .to_string_lossy()
+                                    .to_string()
+                            };
 
-                        let territory = if !code.contains('_') {
-                            String::new()
-                        } else if territory_en.is_empty() {
-                            code.split(['_', '.', '@']).nth(1).unwrap().to_string()
-                        } else {
-                            dgettext("iso_3166-1", &territory_en)
-                        };
+                            let territory = if !code.contains('_') {
+                                String::new()
+                            } else if territory_en.is_empty() {
+                                code.split(['_', '.', '@']).nth(1).unwrap().to_string()
+                            } else {
+                                dgettext("iso_3166-1", &territory_en)
+                            };
 
-                        unsafe {
-                            setlocale(LocaleCategory::LcAll, current);
-                        }
-                        Language {
-                            code: code.to_string(),
-                            name,
-                            territory,
-                        }
-                    })
-                    .collect::<Vec<_>>(),
+                            unsafe {
+                                setlocale(LocaleCategory::LcAll, current);
+                            }
+                            Language {
+                                code: code.to_string(),
+                                name,
+                                territory,
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                }),
                 Err(e) => {
                     log::error!("Failed to run 'locale -a': {e}");
-                    Vec::with_capacity(0)
+                    Vec::default()
                 }
             }
         })

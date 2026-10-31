@@ -13,24 +13,6 @@ pub struct Layout {
     description: String,
 }
 
-impl Layout {
-    pub fn new(name: String, short_description: Option<String>, description: String) -> Self {
-        Self {
-            name,
-            short_description,
-            description,
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn description(&self) -> &str {
-        &self.description
-    }
-}
-
 pub struct LayoutManager {
     layouts: Vec<Layout>,
 }
@@ -107,7 +89,7 @@ fn switch_keyboard_layout(layout: &str, layouts: &[Layout]) -> bool {
     let idx = layouts
         .iter()
         .enumerate()
-        .find(|(_, l)| l.name() == layout)
+        .find(|(_, l)| l.name == layout)
         .map(|(i, _)| i)
         .unwrap();
     match std::env::var("XDG_SESSION_TYPE").as_deref() {
@@ -147,20 +129,18 @@ fn system_layouts() -> Vec<Layout> {
             .iter()
             .flat_map(|l| {
                 let layout = &l.config_item;
-                let mut layouts = vec![Layout::new(
-                    layout.name.clone(),
-                    layout.short_description.clone(),
-                    layout.description.clone(),
-                )];
+                let mut layouts = vec![Layout {
+                    name: layout.name.clone(),
+                    short_description: layout.short_description.clone(),
+                    description: layout.description.clone(),
+                }];
                 if let Some(v) = l.variants() {
                     layouts.extend(
                         v.iter()
-                            .map(|v| {
-                                Layout::new(
-                                    [&layout.name, v.name()].join("@"),
-                                    layout.short_description.clone(),
-                                    layout.description.clone(),
-                                )
+                            .map(|v| Layout {
+                                name: [&layout.name, v.name()].join("@"),
+                                short_description: layout.short_description.clone(),
+                                description: layout.description.clone(),
                             })
                             .collect::<Vec<Layout>>(),
                     );
@@ -182,7 +162,7 @@ mod hyprland {
         let layout_names = keyboard_layouts().unwrap_or_default();
         sys_layouts
             .into_iter()
-            .filter(|l| layout_names.iter().any(|name| name == l.name()))
+            .filter(|l| layout_names.iter().any(|name| name == &l.name))
             .collect()
     }
 
@@ -190,7 +170,7 @@ mod hyprland {
         let active_keymap = active_keymap();
         layouts
             .iter()
-            .find(|l| Some(l.description()) == active_keymap.as_deref())
+            .find(|l| Some(&l.description) == active_keymap.as_ref())
             .unwrap()
     }
 
@@ -244,11 +224,7 @@ mod sway {
             .expect("No main keyboard found");
         sys_layouts
             .into_iter()
-            .filter(|l| {
-                keyboard
-                    .xkb_layout_names
-                    .contains(&l.description().to_string())
-            })
+            .filter(|l| keyboard.xkb_layout_names.contains(&l.description))
             .collect()
     }
 
@@ -264,7 +240,7 @@ mod sway {
             .unwrap();
         layouts
             .iter()
-            .find(|l| l.description() == xkb_active_layout_name)
+            .find(|l| l.description == xkb_active_layout_name)
             .unwrap()
     }
 
@@ -340,7 +316,7 @@ mod x11 {
             log::error!("old keyboard layout is not an valid rmlvo: {old:?}");
             return false;
         } else {
-            let lv: Vec<_> = layout.name().split(LAYOUT_VARIANT_SEP).collect();
+            let lv: Vec<_> = layout.name.split(LAYOUT_VARIANT_SEP).collect();
             let (l, v) = if lv.len() == 2 {
                 (lv[0], lv[1])
             } else {

@@ -30,28 +30,6 @@ pub struct User {
     user_name: Option<String>,
 }
 
-impl User {
-    fn new(
-        home_directory: Option<String>,
-        icon_file: Option<String>,
-        language: Option<String>,
-        real_name: Option<String>,
-        session: Option<String>,
-        uid: Option<u32>,
-        user_name: Option<String>,
-    ) -> Self {
-        Self {
-            home_directory,
-            icon_file,
-            language,
-            real_name,
-            session,
-            uid,
-            user_name,
-        }
-    }
-}
-
 pub struct UserManager {
     users: Vec<User>,
 }
@@ -67,31 +45,29 @@ impl UserManager {
                     .map(|o| {
                         let user = AccountsService::user_proxy(o);
                         zbus::block_on(async {
-                            User::new(
-                                user.home_directory().await.ok(),
-                                user.icon_file().await.ok(),
-                                user.language().await.ok(),
-                                user.real_name().await.ok(),
-                                user.session().await.ok(),
-                                user.uid().await.map(|u| u as u32).ok(),
-                                user.user_name().await.ok(),
-                            )
+                            User {
+                                home_directory: user.home_directory().await.ok(),
+                                icon_file: user.icon_file().await.ok(),
+                                language: user.language().await.ok(),
+                                real_name: user.real_name().await.ok(),
+                                session: user.session().await.ok(),
+                                uid: user.uid().await.map(|u| u as u32).ok(),
+                                user_name: user.user_name().await.ok(),
+                            }
                         })
                     })
                     .collect(),
                 None => vec![],
             };
             let pwd_users: Vec<_> = pwd::Passwd::iter()
-                .map(|u| {
-                    User::new(
-                        Some(u.dir),
-                        None,
-                        None,
-                        u.gecos,
-                        None,
-                        Some(u.uid),
-                        Some(u.name),
-                    )
+                .map(|u| User {
+                    home_directory: Some(u.dir),
+                    icon_file: None,
+                    language: None,
+                    real_name: u.gecos,
+                    session: None,
+                    uid: Some(u.uid),
+                    user_name: Some(u.name),
                 })
                 .filter(|u| {
                     let (uid_min, uid_max) = get_uid_minmax();
