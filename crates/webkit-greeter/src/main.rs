@@ -20,19 +20,6 @@ use crate::{
 };
 
 fn main() -> glib::ExitCode {
-    // WebKitGTK 2.41.1 is the first unstable release of this cycle
-    // and already includes the DMABUF support that is used by default.
-    // We encourage everybody to try it out and provide feedback or report any issue.
-    // Please, export the contents of webkit://gpu and attach it to the bug report
-    // when reporting any problem related to graphics.
-    // To check if the issue is a regression of the DMABUF implementation you can
-    // use WEBKIT_DISABLE_DMABUF_RENDERER=1 to use the WPE renderer or X11 instead.
-    // This environment variable and the WPE render/X11 code will be eventually removed
-    // if DMABUF works fine. -- https://planet.webkitgtk.org/
-    //
-    // HACK: disable webkitgtk DMABUF renderer
-    unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
-
     logger::logger_init(log::LevelFilter::Debug);
 
     let args = CliArgs::parse();
