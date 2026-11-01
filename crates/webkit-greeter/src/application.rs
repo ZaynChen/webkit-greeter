@@ -69,7 +69,7 @@ pub fn on_activate(app: &Application, config: &Config) {
         };
         let (primary_monitors, secondary_monitors): (Vec<_>, Vec<_>) = monitors
             .iter::<Monitor>()
-            .filter_map(|m| m.ok())
+            .filter_map(Result::ok)
             .enumerate()
             .partition(|(idx, m)| {
                 idx.to_string() == primary_monitor

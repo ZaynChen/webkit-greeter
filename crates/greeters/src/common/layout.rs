@@ -156,6 +156,8 @@ fn system_layouts() -> Vec<Layout> {
 }
 
 mod hyprland {
+    use std::convert::identity;
+
     use super::{Layout, system_layouts};
     pub(super) fn xkb_layouts() -> Vec<Layout> {
         let sys_layouts = system_layouts();
@@ -190,7 +192,7 @@ mod hyprland {
             && let Some(ks) = d["keyboards"].as_array()
         {
             ks.iter()
-                .find(|k| k["main"].as_bool().is_some_and(|main| main))
+                .find(|k| k["main"].as_bool().is_some_and(identity))
                 .cloned()
         } else {
             None
@@ -297,14 +299,14 @@ mod x11 {
 
     pub(super) fn xkb_layout(layouts: &[Layout]) -> &Layout {
         if let Some(lv) = xkb_rmlvo().get(2..4) {
-            let layout = if lv.iter().any(|s| s.is_empty()) {
+            let layout = if lv.iter().any(String::is_empty) {
                 lv.first().unwrap().to_string()
             } else {
                 lv.join(LAYOUT_VARIANT_SEP)
             };
             if let Some(l) = layouts.iter().find(|l| l.name == layout) {
                 return l;
-            };
+            }
         }
 
         layouts.first().unwrap()

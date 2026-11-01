@@ -10,7 +10,7 @@ pub(super) struct ThemeUtils {
 
 impl ThemeUtils {
     pub(super) fn new(allowed_dirs: &[String], theme: &str) -> Self {
-        let mut allowed_dirs: Vec<String> = allowed_dirs.iter().map(|s| s.to_string()).collect();
+        let mut allowed_dirs: Vec<String> = allowed_dirs.iter().map(String::to_string).collect();
         if let Ok(path) = std::fs::canonicalize(theme) {
             let theme_dir = path.with_file_name("");
             allowed_dirs.push(theme_dir.to_string_lossy().to_string());

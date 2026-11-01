@@ -100,7 +100,7 @@ pub fn show_console_error_prompt(message: UserMessage, dispatcher: &Dispatcher) 
                 }
                 2 => {
                     primary.reload();
-                    secondaries.iter().for_each(|webview| webview.reload());
+                    secondaries.iter().for_each(WebViewExt::reload);
                     true
                 }
                 _ => false,

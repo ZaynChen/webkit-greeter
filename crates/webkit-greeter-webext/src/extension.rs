@@ -57,11 +57,11 @@ fn send_request(page: &WebPage, context: &jsc::Context) -> jsc::Value {
                     && let request = &params[0]
                     && request.is_object()
                     && let target = request.object_get_property("target")
-                    && target.as_ref().is_some_and(|t| t.is_string())
+                    && target.as_ref().is_some_and(jsc::Value::is_string)
                     && let method = request.object_get_property("method")
-                    && method.as_ref().is_some_and(|t| t.is_string())
+                    && method.as_ref().is_some_and(jsc::Value::is_string)
                     && let args = request.object_get_property("args")
-                    && args.as_ref().is_some_and(|t| t.is_string())
+                    && args.as_ref().is_some_and(jsc::Value::is_string)
                 {
                     (
                         target.unwrap().to_str(),

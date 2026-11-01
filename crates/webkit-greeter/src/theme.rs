@@ -22,7 +22,7 @@ pub fn print_themes(themes_dir: &str) {
 fn list_themes(themes_dir: &str) -> Vec<String> {
     let mut themes = match std::fs::read_dir(themes_dir) {
         Ok(dir) => dir
-            .filter_map(|ent| ent.ok())
+            .filter_map(Result::ok)
             .filter(|ent| ent.file_type().is_ok_and(|ft| ft.is_dir()))
             .map(|ent| ent.file_name().to_string_lossy().to_string())
             .collect(),

@@ -24,58 +24,14 @@ impl AccountsService {
     default_path = "/org/freedesktop/Accounts"
 )]
 pub trait Accounts {
-    /// CacheUser method
-    fn cache_user(&self, name: &str) -> zbus::Result<zbus::OwnedObjectPath>;
-
-    /// CreateUser method
-    fn create_user(
-        &self,
-        name: &str,
-        fullname: &str,
-        account_type: i32,
-    ) -> zbus::Result<zbus::OwnedObjectPath>;
-
-    /// DeleteUser method
-    fn delete_user(&self, id: i64, remove_files: bool) -> zbus::Result<()>;
-
     /// FindUserById method
     fn find_user_by_id(&self, id: i64) -> zbus::Result<zbus::OwnedObjectPath>;
 
     /// FindUserByName method
     fn find_user_by_name(&self, name: &str) -> zbus::Result<zbus::OwnedObjectPath>;
 
-    /// GetUsersLanguages method
-    fn get_users_languages(&self) -> zbus::Result<Vec<String>>;
-
     /// ListCachedUsers method
     fn list_cached_users(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
-
-    /// UncacheUser method
-    fn uncache_user(&self, name: &str) -> zbus::Result<()>;
-
-    /// UserAdded signal
-    #[zbus(signal)]
-    fn user_added(&self, user: zbus::ObjectPath<'_>) -> zbus::Result<()>;
-
-    /// UserDeleted signal
-    #[zbus(signal)]
-    fn user_deleted(&self, user: zbus::ObjectPath<'_>) -> zbus::Result<()>;
-
-    /// AutomaticLoginUsers property
-    #[zbus(property)]
-    fn automatic_login_users(&self) -> zbus::Result<Vec<zbus::OwnedObjectPath>>;
-
-    /// DaemonVersion property
-    #[zbus(property)]
-    fn daemon_version(&self) -> zbus::Result<String>;
-
-    /// HasMultipleUsers property
-    #[zbus(property)]
-    fn has_multiple_users(&self) -> zbus::Result<bool>;
-
-    /// HasNoUsers property
-    #[zbus(property)]
-    fn has_no_users(&self) -> zbus::Result<bool>;
 }
 
 #[zbus::proxy(

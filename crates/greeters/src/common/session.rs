@@ -8,7 +8,7 @@ use webkit::glib::{
     KEY_FILE_DESKTOP_KEY_TRY_EXEC, KeyFile, KeyFileFlags, find_program_in_path, system_data_dirs,
 };
 
-use std::{collections::HashMap, fs::read_dir, path::PathBuf, sync::OnceLock};
+use std::{collections::HashMap, convert::identity, fs::read_dir, path::PathBuf, sync::OnceLock};
 
 #[derive(Debug, Serialize)]
 pub struct Session {
@@ -80,10 +80,10 @@ impl SessionManager {
 fn is_session_desktop_file(keyfile: &KeyFile) -> bool {
     let no_display = keyfile
         .boolean(KEY_FILE_DESKTOP_GROUP, KEY_FILE_DESKTOP_KEY_NO_DISPLAY)
-        .is_ok_and(|no_display| no_display);
+        .is_ok_and(identity);
     let hidden = keyfile
         .boolean(KEY_FILE_DESKTOP_GROUP, KEY_FILE_DESKTOP_KEY_HIDDEN)
-        .is_ok_and(|hidden| hidden);
+        .is_ok_and(identity);
     let tryexec_failed = keyfile
         .string(KEY_FILE_DESKTOP_GROUP, KEY_FILE_DESKTOP_KEY_TRY_EXEC)
         .is_ok_and(|try_exec| find_program_in_path(try_exec).is_none());
@@ -98,7 +98,7 @@ fn load_session_dir(dir: PathBuf, session_type: &str) -> HashMap<String, Session
         .ok()
         .map(|entries| {
             entries
-                .filter_map(|ent| ent.ok())
+                .filter_map(Result::ok)
                 .filter_map(|file| {
                     let keyfile = KeyFile::new();
                     let filepath = file.path();
@@ -117,10 +117,10 @@ fn load_session_dir(dir: PathBuf, session_type: &str) -> HashMap<String, Session
                             );
                         } else if keyfile
                             .has_key(KEY_FILE_DESKTOP_GROUP, "Name")
-                            .is_ok_and(|b| b)
+                            .is_ok_and(identity)
                             && keyfile
                                 .has_key(KEY_FILE_DESKTOP_GROUP, "Exec")
-                                .is_ok_and(|b| b)
+                                .is_ok_and(identity)
                         {
                             let key = file
                                 .file_name()
