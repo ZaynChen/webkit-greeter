@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 
 use super::dbus::AccountsService;
 
@@ -69,10 +69,7 @@ impl UserManager {
                     uid: Some(u.uid),
                     user_name: Some(u.name),
                 })
-                .filter(|u| {
-                    let (uid_min, uid_max) = get_uid_minmax();
-                    u.uid.is_some_and(|uid| uid_min <= uid && uid <= uid_max)
-                })
+                .filter(|u| u.uid.is_some_and(check_uid))
                 .collect();
 
             let uids: Vec<_> = users.iter().map(|u| u.uid).collect();
@@ -89,19 +86,15 @@ impl UserManager {
     pub fn list_users(&self) -> &[User] {
         &self.users
     }
-
-    // pub fn set_language(username: &str, language: &str) -> Result<(), String> {
-    //     match AccountsService::accounts_proxy() {
-    //         Some(proxy) => zbus::block_on(proxy.find_user_by_name(username))
-    //             .and_then(|o| zbus::block_on(AccountsService::user_proxy(o).set_language(language)))
-    //             .map_err(|e| e.to_string()),
-    //         None => Err("Failed to connect to accountsservice".into()),
-    //     }
-    // }
 }
 
-fn get_uid_minmax() -> (u32, u32) {
-    match std::fs::read_to_string("/etc/login.defs") {
+fn check_uid(uid: u32) -> bool {
+    let (uid_min, uid_max) = *UID_MIN_MAX;
+    uid_min <= uid && uid <= uid_max
+}
+
+static UID_MIN_MAX: LazyLock<(u32, u32)> =
+    LazyLock::new(|| match std::fs::read_to_string("/etc/login.defs") {
         Ok(content) => {
             let minmax: Vec<_> = content
                 .lines()
@@ -127,5 +120,4 @@ fn get_uid_minmax() -> (u32, u32) {
             );
             (1000, 60000)
         }
-    }
-}
+    });

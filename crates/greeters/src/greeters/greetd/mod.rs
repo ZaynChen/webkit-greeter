@@ -62,7 +62,7 @@ impl GreetdGreeter {
             match method {
                 "authenticate" => self.create_session(args[0].as_str()),
                 "respond" => self.respond(args[0].as_str()),
-                "start_session" => self.start_session(args[0].as_str().as_ref().unwrap()),
+                "start_session" => self.start_session(args[0].as_str().unwrap()),
                 s => {
                     log::warn!("{s} does not implemented");
                     "undefined".to_string()
@@ -88,35 +88,30 @@ impl GreetdGreeter {
     }
 
     fn create_session(&self, username: Option<&str>) -> String {
-        if let Err(e) = self
-            .greeter
+        self.greeter
             .borrow_mut()
-            .create_session(username.unwrap().to_string())
-        {
-            log::error!("{e}");
-            return false.to_string();
-        }
-        true.to_string()
+            .create_session(username.unwrap_or_default().to_string())
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn cancel_session(&self) -> String {
-        if let Err(e) = self.greeter.borrow_mut().cancel_session() {
-            log::error!("{e}");
-            return false.to_string();
-        }
-        true.to_string()
+        self.greeter
+            .borrow_mut()
+            .cancel_session()
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn respond(&self, response: Option<&str>) -> String {
-        if let Err(e) = self
-            .greeter
+        self.greeter
             .borrow_mut()
-            .post_response(response.map(|s| s.to_string()))
-        {
-            log::error!("{e}");
-            return false.to_string();
-        }
-        true.to_string()
+            .post_response(response.map(str::to_string))
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn start_session(&self, session_key: &str) -> String {

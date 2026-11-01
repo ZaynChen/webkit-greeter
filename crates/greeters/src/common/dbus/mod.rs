@@ -16,8 +16,3 @@ fn system_conn() -> &'static Connection {
     static SYSTEM_CONN: OnceLock<Connection> = OnceLock::new();
     SYSTEM_CONN.get_or_init(|| zbus::block_on(Connection::system()).unwrap())
 }
-
-// fn session_conn() -> &'static Connection {
-//     static SESSION_CONN: OnceLock<Connection> = OnceLock::new();
-//     SESSION_CONN.get_or_init(|| Connection::session().unwrap())
-// }

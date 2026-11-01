@@ -95,54 +95,61 @@ fn load_session_dir(dir: PathBuf, session_type: &str) -> HashMap<String, Session
         return HashMap::with_capacity(0);
     }
     read_dir(dir)
-        .unwrap()
-        .filter_map(|ent| ent.ok())
-        .filter_map(|file| {
-            let keyfile = KeyFile::new();
-            let filepath = file.path();
-            let filepath_str = filepath.to_str().unwrap();
-            if let Err(e) = keyfile.load_from_file(&filepath, KeyFileFlags::NONE) {
-                log::warn!("Failed to load \"{filepath_str}\": {e}");
-            } else if keyfile.has_group(KEY_FILE_DESKTOP_GROUP) {
-                if !is_session_desktop_file(&keyfile) {
-                    log::warn!(
-                        "\"{filepath_str}\" is hidden, {}, {}",
-                        "contains non-executable TryExec program",
-                        "or is otherwise not capable of being used"
-                    );
-                } else if keyfile
-                    .has_key(KEY_FILE_DESKTOP_GROUP, "Name")
-                    .is_ok_and(|b| b)
-                    && keyfile
-                        .has_key(KEY_FILE_DESKTOP_GROUP, "Exec")
-                        .is_ok_and(|b| b)
-                {
-                    let key = file
-                        .file_name()
-                        .to_string_lossy()
-                        .trim_end_matches(".desktop")
-                        .to_string();
-                    let name = keyfile
-                        .locale_string(KEY_FILE_DESKTOP_GROUP, "Name", None)
-                        .unwrap()
-                        .into();
-                    let comment = keyfile
-                        .locale_string(KEY_FILE_DESKTOP_GROUP, "Comment", None)
-                        .unwrap_or_default()
-                        .into();
-                    let exec = keyfile
-                        .string(KEY_FILE_DESKTOP_GROUP, "Exec")
-                        .unwrap_or_default()
-                        .into();
-                    return Some((
-                        key.clone(),
-                        Session::new(key, session_type.into(), name, comment, exec),
-                    ));
-                } else {
-                    log::warn!("{filepath_str} contains no \"Name\" or \"Exec\" key");
-                }
-            }
-            None
+        .ok()
+        .map(|entries| {
+            entries
+                .filter_map(|ent| ent.ok())
+                .filter_map(|file| {
+                    let keyfile = KeyFile::new();
+                    let filepath = file.path();
+                    let filepath_str = filepath.to_str().unwrap();
+                    if keyfile
+                        .load_from_file(&filepath, KeyFileFlags::NONE)
+                        .inspect_err(|e| log::warn!("Failed to load \"{filepath_str}\": {e}"))
+                        .is_ok()
+                        && keyfile.has_group(KEY_FILE_DESKTOP_GROUP)
+                    {
+                        if !is_session_desktop_file(&keyfile) {
+                            log::warn!(
+                                "\"{filepath_str}\" is hidden, {}, {}",
+                                "contains non-executable TryExec program",
+                                "or is otherwise not capable of being used"
+                            );
+                        } else if keyfile
+                            .has_key(KEY_FILE_DESKTOP_GROUP, "Name")
+                            .is_ok_and(|b| b)
+                            && keyfile
+                                .has_key(KEY_FILE_DESKTOP_GROUP, "Exec")
+                                .is_ok_and(|b| b)
+                        {
+                            let key = file
+                                .file_name()
+                                .to_string_lossy()
+                                .trim_end_matches(".desktop")
+                                .to_string();
+                            let name = keyfile
+                                .locale_string(KEY_FILE_DESKTOP_GROUP, "Name", None)
+                                .unwrap()
+                                .into();
+                            let comment = keyfile
+                                .locale_string(KEY_FILE_DESKTOP_GROUP, "Comment", None)
+                                .unwrap_or_default()
+                                .into();
+                            let exec = keyfile
+                                .string(KEY_FILE_DESKTOP_GROUP, "Exec")
+                                .unwrap_or_default()
+                                .into();
+                            return Some((
+                                key.clone(),
+                                Session::new(key, session_type.into(), name, comment, exec),
+                            ));
+                        } else {
+                            log::warn!("{filepath_str} contains no \"Name\" or \"Exec\" key");
+                        }
+                    }
+                    None
+                })
+                .collect()
         })
-        .collect()
+        .unwrap_or_default()
 }

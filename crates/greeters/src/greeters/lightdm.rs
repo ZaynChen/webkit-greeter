@@ -34,7 +34,6 @@ impl LightDMGreeter {
             move |_, text, ty| signals::show_message(&webview, text, ty.try_into().unwrap())
         ));
 
-        // if let Err(e) = greeter.connect_to_daemon_sync() {
         if let Err(e) = glib::MainContext::default().block_on(greeter.connect_to_daemon_future()) {
             log::error!("{e}");
         }
@@ -99,41 +98,35 @@ impl LightDMGreeter {
     }
 
     fn authenticate(&self, username: Option<String>) -> String {
-        if let Err(e) = self.greeter.authenticate(username) {
-            log::error!("{e}");
-            false.to_string()
-        } else {
-            true.to_string()
-        }
+        self.greeter
+            .authenticate(username)
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn cancel_authentication(&self) -> String {
-        if let Err(e) = self.greeter.cancel_authentication() {
-            log::error!("{e}");
-            false.to_string()
-        } else {
-            true.to_string()
-        }
+        self.greeter
+            .cancel_authentication()
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn respond(&self, response: String) -> String {
-        if let Err(e) = self.greeter.respond(response) {
-            log::error!("{e}");
-            false.to_string()
-        } else {
-            true.to_string()
-        }
+        self.greeter
+            .respond(response)
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn start_session_sync(&self, session: Option<String>) -> String {
-        if let Err(e) =
-            glib::MainContext::default().block_on(self.greeter.start_session_future(session))
-        {
-            log::error!("{e}");
-            false.to_string()
-        } else {
-            true.to_string()
-        }
+        glib::MainContext::default()
+            .block_on(self.greeter.start_session_future(session))
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn autologin_guest_hint(&self) -> String {
@@ -187,12 +180,11 @@ impl LightDMGreeter {
     }
 
     fn authenticate_as_guest(&self) -> String {
-        if let Err(e) = self.greeter.authenticate_as_guest() {
-            log::error!("{e}");
-            false.to_string()
-        } else {
-            true.to_string()
-        }
+        self.greeter
+            .authenticate_as_guest()
+            .inspect_err(|e| log::error!("{e}"))
+            .is_ok()
+            .to_string()
     }
 
     fn cancel_autologin(&self) -> String {
